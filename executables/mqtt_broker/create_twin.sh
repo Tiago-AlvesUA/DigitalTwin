@@ -29,5 +29,3 @@ curl -X PUT "${BASE_URL}/things/${THING_ID}" \
      -u "${AUTH}" \
      -H "Content-Type: application/json" \
      -d "${THING_PAYLOAD}"
-
-echo "Thing ${THING_ID} created or updated."

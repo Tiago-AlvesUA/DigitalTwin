@@ -41,5 +41,3 @@ curl -X PUT "${BASE_URL}/policies/${POLICY_ID}" \
      -u "${AUTH}" \
      -H "Content-Type: application/json" \
      -d "${POLICY_PAYLOAD}"
-
-echo "Policy ${POLICY_ID} created or updated."
