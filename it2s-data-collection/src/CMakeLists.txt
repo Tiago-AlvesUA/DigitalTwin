@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED glib-2.0)
+pkg_search_module(MBIM REQUIRED mbim-glib)
 pkg_search_module(QMI REQUIRED qmi-glib)
 pkg_search_module(JSON-C REQUIRED json-c)
 

@@ -197,6 +197,13 @@ void client_alloc_callback(GObject* sourceObject, GAsyncResult* res, void* userD
 	qmidev = (QmiDevice*) sourceObject;
 	GError* error = NULL;
 	qmiclient = (QmiClient*) qmi_device_allocate_client_finish(qmidev, res, &error);
+	
+	if (!qmiclient) {
+        g_error("[it2s-data-collection] Failed to create QMI client: %s", error->message);
+        g_error_free(error);
+        exit(1); // Make sure to exit or cleanup here
+    }
+	
 	cid = qmi_client_get_cid((QmiClient*) qmiclient);
 	syslog_debug("[it2s-data-collection] allocated client with cid: %d", cid);
 

@@ -34,7 +34,6 @@ typedef struct communications_manager {
 
 void com_config(void* com_struct);
 void* mqtt_config(void *mqtt_struct);
-void mqtt_set_tile_topic(mqtt_manager_t* mqtt_manager, double latitude, double longitude);
 
 int it2s_read(void* user_data);
 void it2s_send_values(communications_manager_t* com_manager);

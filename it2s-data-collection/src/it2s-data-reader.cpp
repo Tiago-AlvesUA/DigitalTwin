@@ -194,6 +194,7 @@ int it2s_make_message(communications_manager_t* communications_manager, char* bu
     json_object_put(jobj);
 
     return 0; 
+
 }
 
 
