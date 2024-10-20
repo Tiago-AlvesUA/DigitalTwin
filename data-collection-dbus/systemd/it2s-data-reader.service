@@ -1,0 +1,14 @@
+[Unit]
+Description=IT2S Data Collection
+After=it2s-5g.service it2s-gnssd.service
+
+[Service]
+ExecStartPre=/usr/bin/qmicli -d /dev/cdc-wdm0 --nas-noop --client-cid=7 --device-open-proxy
+ExecStart=/usr/bin/it2s-data-reader
+Restart=always
+RestartSec=2s
+KillMode=mixed
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
