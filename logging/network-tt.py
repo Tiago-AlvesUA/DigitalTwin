@@ -9,34 +9,24 @@ import dbus.service
 import dbus.mainloop.glib
 from gi.repository import GLib
 
-broker_certfile_path = "/etc/it2s/mqtt/it2s-station.crt"
-broker_keyfile_path = "/etc/it2s/mqtt/it2s-station.key"
-broker_cafile_path = "/etc/it2s/mqtt/ca.crt"
-broker_address = "es-broker.av.it.pt"
-broker_port = 8884
-
-mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, "network_logger_mqtt_21")
-mqtt_client.username_pw_set(username="admin", password="t;RHC_vi")
-mqtt_client.tls_set(certfile=broker_certfile_path, keyfile=broker_keyfile_path, ca_certs=broker_cafile_path)
-mqtt_client.connect(broker_address, broker_port)
-
-all_ips = [iface.ip for iface in ifaces.values() if iface.name == "it2s_5g"]
+all_ips = [iface.ip for iface in ifaces.values()]
 traffic = [0, 0]
 running = 1
-
 system_bus = None
 
 class TTService(dbus.service.Object):
+    """ Set up the D-Bus object """
     def __init__(self, conn, object_path):
         dbus.service.Object.__init__(self, conn, object_path)
 
+    """ Define the signal """
     @dbus.service.signal(dbus_interface="org.example.DataReader", signature="ii")
     def NewThroughputAvailable(self, rx_bytes, tx_bytes):
         print(f"New Throughput available: RX: {rx_bytes} TX: {tx_bytes}")
 
 def init_dbus():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
+    
     try:
         system_bus = dbus.SystemBus()
     except Exception as e:
@@ -57,11 +47,11 @@ def pub_tt_to_dbus(rx_bytes, tx_bytes):
 
 def process_packet(packet):
     global traffic
-    print("{}: {}".format(len(packet), packet.summary()))
-
-    if packet.src in all_ips:
+    print("Packet ({}): Source: {} Destination: {}: {}".format(len(packet), packet.src, packet.dst, packet.summary()))
+    
+    if (packet["IP"].src in all_ips):
         traffic[1] += len(packet)
-    elif (packet.dst in all_ips):
+    elif (packet["IP"].dst in all_ips):
         traffic[0] += len(packet)
 
 def process_data():
@@ -70,7 +60,6 @@ def process_data():
     while running:
         try:
             build_message()
-            # mqtt_client.publish("logs/21/THROUGHPUT", mqtt_message)
         except:
             continue
 
@@ -84,13 +73,12 @@ def build_message():
     data["rx_bytes"] = traffic[0]
     data["tx_bytes"] = traffic[1]
     pub_tt_to_dbus(data["rx_bytes"], data["tx_bytes"])
-    # json_data = json.dumps(data)
-    # return json_data
 
 if __name__ == "__main__":
     system_bus = init_dbus()
     throughput_service = TTService(system_bus, "/org/example/DataReader")
 
+    print("Network IPs: " +str(all_ips))
     processing_thread = Thread(target=process_data)
     processing_thread.start()
 
