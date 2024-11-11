@@ -1,0 +1,63 @@
+-- Descriptions é para integrar no repositório ASN do it2s...
+--DTM-PDU-Descriptions {
+
+--}
+
+DITTO-MSG DEFINITIONS AUTOMATIC TAGS ::= 
+BEGIN
+
+-- IMPORTS ================================================
+
+IMPORTS 
+ItsPduHeader, TimestampIts, SequenceNumber, ReferencePosition FROM ETSI-ITS-CDD {
+    itu-t (0) identified-organization (4) etsi (0) itsDomain (5) wg1 (1) 102894 cdd (2) major-version-4 (4) minor-version-2 (2)
+} ModemStatus FROM ModemStatus-PDU-Descriptions {
+    itu (0) it2s (1722) modemstatus(122) version (2)
+}
+
+-- TYPES ================================================
+
+Int8    ::= INTEGER (-128..127)
+UInt8   ::= INTEGER (0..255)
+Int16   ::= INTEGER (-32768..32767)
+UInt16  ::= INTEGER (0..65535)
+Int32   ::= INTEGER (-2147483648..2147483647)
+UInt32  ::= INTEGER (0..4294967295)
+
+-- Main DITTO-MSG structure ================================================
+
+DITTO-MSG ::= SEQUENCE {
+    topic   UTF8String,
+    headers SEQUENCE {},
+    path    UTF8String,
+    dtm     DTM
+}
+
+DTM ::= SEQUENCE {
+    header ItsPduHeader -- protocolVersion*, messageId*, stationId*
+    dtmBody DTMBody
+}
+
+DTMBody ::= SEQUENCE {
+    referenceTime TimestampIts,
+    sequenceNumber SequenceNumber,
+    referencePosition ReferencePosition, -- latitude, longitude, positionConfidenceElipse*, altitude
+    modemStatus ModemStatus OPTIONAL,
+    networkLogs NetworkLogs OPTIONAL
+}
+
+NetworkLogs ::= SEQUENCE {
+    esbrokerDelay   EsBrokerDelay,
+    esbrokerThroughput EsBrokerThroughput
+}
+
+EsBrokerDelay ::= SEQUENCE {
+    messageDelay   INTEGER
+}
+
+EsBrokerThroughput ::= SEQUENCE {
+    rxBytes        INTEGER,
+    txBytes        INTEGER
+}
+
+END

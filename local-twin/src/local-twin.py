@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+import asn1tools
 import json
 import signal
 import sys
@@ -8,8 +9,8 @@ import dbus.mainloop.glib
 from gi.repository import GLib
 
 # MQTT Configuration
-MQTT_HOST = "10.255.41.221"
-MQTT_PORT = 8883
+HONO_BROKER_HOST = "10.255.41.221"
+HONO_BROKER_PORT = 8883
 # auth_id@tenant
 MQTT_USERNAME = "my-auth-id-2@my-tenant"
 MQTT_PASSWORD = "my-password"
@@ -20,6 +21,8 @@ mqtt_client = None
 device_id = None
 es_broker_delay = 0
 es_broker_throughput = [0, 0]
+asn1_files = ['ditto_message_v3.asn1', 'cd_dictionary_ts_102_894_2_v2.2.1.asn1', 'modem_status_2.0.asn1']
+dtm = asn1tools.compile_files(asn1_files, 'jer')
 
 # Signal handler for clean exit
 def signal_handler(sig, frame):
@@ -41,7 +44,7 @@ def setup_mqtt():
 
     mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-    mqtt_client.connect(MQTT_HOST, MQTT_PORT)
+    mqtt_client.connect(HONO_BROKER_HOST, HONO_BROKER_PORT)
     mqtt_client.loop_start()
 
 # Function to listen for D-Bus signals
@@ -122,63 +125,73 @@ def create_json_structure(args):
     nr_pci = args[15]
     timestamp = args[16]
     msg_sn = args[17]
-    
-    jobj = {
+
+    # Create the ASN.1 structure as a Python dictionary
+    ditto_msg = {
         "topic": f"org.acme/{device_id}/things/twin/commands/modify",
         "headers": {},
-        "path": "/features",
+        "path": "/features/localTwin/properties",  # TODO: Modify this path if necessary 
         "value": {
-            "reference_position": {
-                "properties": {
+            "header": {
+                "protocolVersion": 2,
+                "messageId": 2,
+                "stationId": 20
+            },
+            "dtm": {
+                "referenceTime": timestamp,
+                "sequenceNumber" : msg_sn,
+                "referencePosition": {
                     "latitude": gps_latitude,
                     "longitude": gps_longitude,
-                    "altitude": gps_altitude
-                }
-            },
-            "modem_status": {
-                "properties": {
+                    "positionConfidenceEllipse": {
+                        "semiMajorConfidence": 4095,
+                        "semiMinorConfidence": 4095,
+                        "semiMajorOrientation": 900
+                    },
+                    "altitude": {
+                        "altitudeValue": gps_altitude,
+                        "altitudeConfidence": "unavailable"
+                    }
+                },
+                "modemStatus": {
                     "mcc": mcc,
-                    "mnc": mnc
-                }
-            },
-            "nr_modem_status": {
-                "properties": {
-                    "rsrp": nr_rsrp,
-                    "rsrq": nr_rsrq,
-                    "snr": nr_snr,
-                    "pci": nr_pci
-                }
-            },
-            "lte_modem_status": {
-                "properties": {
-                    "rsrp": lte_rsrp,
-                    "rsrq": lte_rsrq,
-                    "snr": lte_snr,
-                    "pci": lte_pci,
-                    "rssi": lte_rssi
-                }
-            },
-            "body": {
-                "properties": {
-                    "generationDeltaTime": timestamp,
-                    "sequenceNumber": msg_sn
-                }
-            },
-            "es_broker_delay": {
-                "properties": {
-                    "message_delay": es_broker_delay
-                }
-            },
-            "es_broker_throughput": {
-                "properties": {
-                    "rx_bytes": es_broker_throughput[0],
-                    "tx_bytes": es_broker_throughput[1]
-                }
+                    "mnc": mnc,
+                    "ratMode": ratmode,
+                    "nr": {
+                        "rsrq": nr_rsrp,
+                        "rsrp": nr_rsrq,
+                        "snr": nr_snr,
+                        "pci": nr_pci
+                    },
+                    "lte": {
+                        "rsrq": lte_rsrp,
+                        "rsrp": lte_rsrq,
+                        "rssi": lte_rssi,
+                        "snr": lte_snr,
+                        "pci": lte_pci
+                    }
+                },
+                "networkLogs": {
+                    "messageDelay": es_broker_delay,
+                    "messageThroughput": {
+                        "rxBytes": es_broker_throughput[0],
+                        "txBytes": es_broker_throughput[1]
+                    }
+                }    
             }
         }
-    }
+    }      
 
-    return json.dumps(jobj)
+    # Encode the structure with ASN.1 and convert to JSON
+    encoded_data = dtm.encode('DITTO-STRUCT', ditto_msg)
+
+    print(f"\n\nEncoded data: {encoded_data}")
+
+    decoded_data = dtm.decode('DITTO-STRUCT', encoded_data)
+
+    print(f"Decoded data: {decoded_data}\n\n")
+
+    return json.dumps(decoded_data)
 
 # Publish data to Hono's MQTT adapter
 def publish_to_mqtt(json_data):

@@ -1,0 +1,22 @@
+DITTO-STRUCT DEFINITIONS AUTOMATIC TAGS ::= 
+BEGIN
+
+-- IMPORTS ================================================
+
+IMPORTS 
+ReferencePosition FROM ETSI-ITS-CDD {
+    itu-t (0) identified-organization (4) etsi (0) itsDomain (5) wg1 (1) 102894 cdd (2) major-version-4 (4) minor-version-1 (1)
+} ModemStatus FROM ModemStatus-PDU-Descriptions {
+    itu (0) it2s (1722) modemstatus(122) version (2)
+};
+
+DITTO-STRUCT ::= SEQUENCE {
+    topic   UTF8String,
+    referencePosition  RefPos
+}
+
+RefPos ::= SEQUENCE {
+    properties  ReferencePosition
+} 
+
+END
