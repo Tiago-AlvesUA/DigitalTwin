@@ -1,0 +1,23 @@
+Para 0/3/3/1/1/0/0/1/1/3/0/3/0/1:
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/1/#' <- Own vehicle tile
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/1/0/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/0/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/3/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/1/2/3/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/1/3/2/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/1/2/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/2/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/1/2/2/#'
+
+Para 0/3/3/1/1/0/0/1/1/3/0/3/0/0:
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/0/#' <- Own vehicle tile
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/1/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/2/1/1/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/2/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/1/2/2/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/1/2/3/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/3/0/3/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/2/1/3/#'
+'its_center/outqueue/json/+/+/0/3/3/1/1/0/0/1/1/3/0/0/3/3/#'
+
+

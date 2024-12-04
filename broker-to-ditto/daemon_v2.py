@@ -33,29 +33,22 @@ def update_ditto(payload):
         print("Response:", response.text)
 
 
-def on_vehicle_message(client, userdata, message):
-    topic = message.topic.split("/")
-    quadtree_map = '/'.join(topic[5:])
-
-    print("\n\nExtracted quadtree map: " + quadtree_map + "\n\n")
-
-    new_topic = f"its_center/inqueue/json/+/+/{quadtree_map}" # Este tópico esta a anular a subscricao inicial ao 20 por causa do +/+
-    if new_topic != current_topic:
-        print(f"Switching subscription to new quadtree topic: {new_topic}")
-        subscribe_to_new_area(new_topic)
-
-
 def on_area_message(client, userdata, message):
     payload_json = json.loads(message.payload)
 
     # Check if the message is coming from the own vehicle
     topic = message.topic.split("/")
-    if topic[3] == "20":
-        quadtree_map = '/'.join(topic[4:])
+    print("\ntopic[3]: \n" + topic[3])
+
+    if topic[3] == "20":    # If the message is coming from the same vehicle
+        quadtree_map = '/'.join(topic[5:])
+        print("\n\nExtracted quadtree map: " + quadtree_map + "\n\n")
+
         new_topic = f"its_center/inqueue/json/+/+/{quadtree_map}"
         if new_topic != current_topic:
             print(f"Switching subscription to new quadtree topic: {new_topic}")
             subscribe_to_new_area(new_topic)
+            
         return  # TODO remove if want to update DITTO with own vehicle data (20)
 
     print("\n\nReceived message '" + str(payload_json) + "' on topic '" + message.topic + "'\n\n")
@@ -71,34 +64,7 @@ def subscribe_to_new_area(new_topic):
     if current_topic:
         mqtt_client.unsubscribe(current_topic)
     mqtt_client.subscribe(new_topic)
-
-    mqtt_client.on_message = on_area_message
     current_topic = new_topic
-
-
-# def get_vehicle_coordinates():
-#     url = f"{DITTO_BASE_URL}/{DITTO_THING_ID}/features/localTwin"
-
-#     response = requests.get(url, auth=(DITTO_USERNAME, DITTO_PASSWORD))
-
-#     if response.status_code == 200:
-#         feature_properties = response.json()
-#     else:
-#         print(f"Failed to get Ditto twin. Status code: {response.status_code}")
-#         print("Response:", response.text)
-    
-#     latitude = feature_properties["properties"]["referencePosition"]["properties"]["latitude"]/10**7
-#     longitude = feature_properties["properties"]["referencePosition"]["properties"]["longitude"]/10**7
-
-#     return latitude, longitude
-
-
-# def setup_mqtt_topic_quadtree():
-#     """ Creates a TMS tile using the vehicle's current location and converts it to the Microsoft QuadTree format. """
-#     latitude, longitude = get_vehicle_coordinates()
-#     tile = Tile.for_latitude_longitude(latitude, longitude, 14) # Zoom level 14
-#     quadtree = tile.quad_tree
-#     return quadtree
 
 
 def setup_initial_mqtt():
@@ -106,7 +72,7 @@ def setup_initial_mqtt():
 
     mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,transport='websockets')
     mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
-    mqtt_client.on_message = on_vehicle_message
+    mqtt_client.on_message = on_area_message # Can have only one callback function at a time
     mqtt_client.connect(BROKER_HOST, BROKER_PORT)
     print("Subscribing to topic: " + MQTT_INITIAL_TOPIC)
     mqtt_client.subscribe(MQTT_INITIAL_TOPIC)
