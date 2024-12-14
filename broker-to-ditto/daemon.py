@@ -35,36 +35,43 @@ DITTO_PASSWORD = 'ditto'
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
 current_original_topic = "placeholder"
 current_subscribed_topics = set()
-local_map = []
+last_local_map_update = 0
 
-# Clear the local perception map every 10 seconds
-def clear_map():
-    while (1):
-        local_map.clear()
-        time.sleep(10)
 
-def create_json(local_map):
+def create_perception_json(timestamp, local_map):
     objects_json = {
-        "properties": {}
+        "properties": {
+            "generationDeltaTime": timestamp
+        }
     }
 
     for obj in local_map:
-        obj_id, obj_lat, obj_lon = obj
-        objects_json["properties"][obj_id] = {
-            "latitude": obj_lat,
-            "longitude": obj_lon
+        id, lat, lon, speed, class_name, class_type = obj
+        objects_json["properties"][id] = {
+            "latitude": lat,
+            "longitude": lon,
+            "speed": speed,
+            "classification": {
+                "class": {
+                    class_name: {
+                        "type": class_type
+                    }
+                }
+            }
         }
 
     return objects_json
 
-def manage_ditto_perception():
-    while (1):
-        perception = create_json(local_map)
-        update_ditto_perception(perception)
-        time.sleep(0.1) 
         
 def cpm_to_local_map(payload):
+    # TODO: Distinguish CPM versions here?
+
     payload = json.loads(payload)
+
+    # New local map to be updated
+    local_map = []
+
+    timestamp = payload["cpm"]["generationDeltaTime"]
 
     station_position = [
         payload["cpm"]["cpmParameters"]["managementContainer"]["referencePosition"]["latitude"] / 10e6,
@@ -78,16 +85,28 @@ def cpm_to_local_map(payload):
             obj_id = obj["objectID"]
             obj_lat = station_position[0] + (obj["yDistance"]["value"] / 6371000 / 100) * (180 / math.pi) 
             obj_lon = station_position[1] + ((obj["xDistance"]["value"] / 6371000 / 100) * (180 / math.pi)) / math.cos(((station_position[0] + (obj["yDistance"]["value"] / 6371000 / 100) * (180 / math.pi)) * math.pi / 180))
-            local_map.append((obj_id, obj_lat, obj_lon))
+            
+            obj_speed_kmh = round(float(math.sqrt(math.pow(obj["xSpeed"]["value"],2) + math.pow(obj["ySpeed"]["value"],2))) * 0.036, 1)
+            
+            if obj["classification"] and obj["classification"][0] and obj["classification"][0]["class"]:
+                obj_class_name = list(obj["classification"][0]["class"].keys())[0]
+                obj_class_type = obj["classification"][0]["class"][obj_class_name]["type"]
+
+            local_map.append((obj_id, obj_lat, obj_lon, obj_speed_kmh, obj_class_name, obj_class_type))
+
+    return timestamp, local_map
 
 
-def update_ditto_perception(local_map):
+def update_ditto_perception(perception):
+    global last_local_map_update
+
     url = f"{DITTO_BASE_URL}/{DITTO_THING_ID}/features/Perception"
     # Set up headers and basic authentication
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
     
     # Send HTTP PUT request to update the twin in Ditto; TODO: Verify status code of response if needed
-    requests.put(url, headers=headers, auth=(DITTO_USERNAME, DITTO_PASSWORD), json=local_map)
+    requests.put(url, headers=headers, auth=(DITTO_USERNAME, DITTO_PASSWORD), json=perception)
+    last_local_map_update = time.time()
 
 
 def update_ditto_dynamics(dynamics):
@@ -219,21 +238,26 @@ def manage_current_tile(message):
 
 
 def on_message_cb(client, userdata, message):
-    #print("Received message on topic '" + message.topic)
+    global last_local_map_update
+
     station_id = message.topic.split("/")[3]
-    
+
     if (station_id == "20"):
-        #print(bcolors.CYAN + "Received message on topic '" + message.topic + bcolors.ENDC)
         manage_current_tile(message)
         
         if ("CAM" in message.topic):
             obtain_dynamics(message.payload)
 
-    elif (station_id != 20):
+    elif (station_id != "20"):
         if ("CPM" in message.topic):
-            cpm_to_local_map(message.payload)
-    #     elif ("CAM" in message.topic):
-    #         cam_to_local_map(message.payload)
+            time_diff = time.time() - last_local_map_update
+            # Check if it has passed at least 1 second since the last ditto update
+            if (time_diff < 1):
+                return
+
+            timestamp, local_map = cpm_to_local_map(message.payload)
+            perception = create_perception_json(timestamp, local_map)
+            update_ditto_perception(perception)
 
 
 def on_connect_cb(client, userdata, flags, reason_code, properties):
@@ -259,15 +283,12 @@ def subscribe_to_get_vehicle_area():
     client.loop_forever()
 
 
-def start_agent_threads():
+def start_agent_thread():
     initial_thread = threading.Thread(target=subscribe_to_get_vehicle_area, daemon=True)
     initial_thread.start()
 
-    perception_thread = threading.Thread(target=manage_ditto_perception, daemon=True)
-    perception_thread.start()
-
-    clear_map_thread = threading.Thread(target=clear_map, daemon=True)
-    clear_map_thread.start()
+    # perception_thread = threading.Thread(target=manage_ditto_perception, daemon=True)
+    # perception_thread.start()
 
     try:
         while True:
@@ -279,4 +300,4 @@ def start_agent_threads():
 
 
 if __name__ == "__main__":
-    start_agent_threads()
+    start_agent_thread()
