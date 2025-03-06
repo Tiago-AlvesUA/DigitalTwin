@@ -6,6 +6,7 @@ import sys
 import toml
 import dbus
 import dbus.mainloop.glib
+import time
 from gi.repository import GLib
 
 # MQTT Configuration
@@ -19,8 +20,8 @@ MQTT_CAFILE = "../certificate/c2e_hono_truststore.pem"
 
 mqtt_client = None
 device_id = None
-es_broker_delay = 0
-es_broker_throughput = [0, 0]
+network_delay = 0
+network_throughput = [0, 0]
 asn1_files = ['ditto_message_v3.asn1', 'cd_dictionary_ts_102_894_2_v2.2.1.asn1', 'modem_status_2.0.asn1']
 dtm = asn1tools.compile_files(asn1_files, 'jer')
 
@@ -60,49 +61,64 @@ def listen_for_signals():
                              dbus_interface="org.example.DataReader",
                              signal_name="NewThroughputAvailable")
 
+def timestamp_to_its(unix_timestamp):
+    if unix_timestamp == 0:
+        return 0
+    # Miliseconds timestamp
+    return int(((unix_timestamp + 5) * 1000) - 1072915200000)
+
+# Callback function when a es-broker throughput signal is received from D-Bus
 def on_new_esbroker_tt_available(*args):
-    global es_broker_throughput, device_id
-    #device_id = "my-device-2" # Now remains static but to be changed later on
+    global network_throughput, device_id
+    device_id = "my-device-2" # TODO: Now remains static but to be changed later on
 
-    #rx_bytes = args[0]
-    es_broker_throughput[0] = args[0]
-    #tx_bytes = args[1]
-    es_broker_throughput[1] = args[1]
+    network_throughput[0] = args[0] # rx_bytes
+    network_throughput[1] = args[1] # tx_bytes
 
-    # jobj = {
-    #     "topic": f"org.acme/{device_id}/things/twin/commands/modify",
-    #     "headers": {},
-    #     "path": "/features/es_broker_throughput/properties",
-    #     "value": {
-    #         "rx_bytes": rx_bytes,
-    #         "tx_bytes": tx_bytes
-    #     }
-    # }
+    unix_timestamp = time.time()
+    timestamp = timestamp_to_its(unix_timestamp)
 
-    # publish_to_mqtt(json.dumps(jobj))
+    jobj = {
+        "topic": f"org.acme/{device_id}/things/twin/commands/modify",
+        "headers": {},
+        "path": "/features/NetworkThroughput/properties",
+        "value": {
+            "referenceTime": timestamp,
+            "rx_bytes": network_throughput[0],
+            "tx_bytes": network_throughput[1]
+        }
+    }
+
+    publish_to_mqtt(json.dumps(jobj))
 
 # Callback function when a es-broker delay signal is received from D-Bus
 def on_new_esbroker_delay_available(*args):
-    global es_broker_delay, device_id
-    es_broker_delay = args[0]
-    #device_id = "my-device-2" # Now remains static but to be changed later on
+    global network_delay, device_id
+    network_delay = args[0]
+    device_id = "my-device-2" # TODO: Now remains static but to be changed later on
+    
+    unix_timestamp = time.time()
+    timestamp = timestamp_to_its(unix_timestamp)
 
-    # jobj = {
-    #     "topic": f"org.acme/{device_id}/things/twin/commands/modify",
-    #     "headers": {},
-    #     "path": "/features/es_broker_delay/properties/message_delay",
-    #     "value": es_broker_delay
-    # }
+    jobj = {
+        "topic": f"org.acme/{device_id}/things/twin/commands/modify",
+        "headers": {},
+        "path": "/features/MessageDelay/properties",
+        "value": {
+            "referenceTime": timestamp,
+            "delay": network_delay
+        }
+    }
 
-    # publish_to_mqtt(json.dumps(jobj))
+    publish_to_mqtt(json.dumps(jobj))
 
 # Callback function when a data signal is received from D-Bus
 def on_new_data_available(*args):
-    json_data = create_json_structure(args)
+    json_data = create_modstatus_msg(args)
     publish_to_mqtt(json_data)
 
 
-def create_json_structure(args):
+def create_modstatus_msg(args):
     global device_id
     print("Previous device ID: ", device_id)
     device_id = "my-device-2" # Now remains static but to be changed later on 
@@ -124,74 +140,52 @@ def create_json_structure(args):
     lte_pci = args[14]
     nr_pci = args[15]
     timestamp = args[16]
-    msg_sn = args[17]
+    # msg_sn = args[17] # Not needed now
 
-    # Create the ASN.1 structure as a Python dictionary
+
     ditto_msg = {
         "topic": f"org.acme/{device_id}/things/twin/commands/modify",
         "headers": {},
-        "path": "/features/localTwin/properties",  # TODO: Modify this path if necessary 
+        "path": "/features/ModemStatus/properties",  # TODO: Modify this path if necessary 
         "value": {
-            "header": {
-                "protocolVersion": 2,
-                "messageId": 2,
-                "stationId": 20
+            "referenceTime": timestamp,
+            "referencePosition": {  # TODO: RefPosition stays here for now but it might be received from the broker later, to a new feature, Localization
+                "latitude": gps_latitude,
+                "longitude": gps_longitude,
+                "positionConfidenceEllipse": {
+                    "semiMajorConfidence": 4095,
+                    "semiMinorConfidence": 4095,
+                    "semiMajorOrientation": 900
+                },
+                "altitude": {
+                    "altitudeValue": gps_altitude,
+                    "altitudeConfidence": "unavailable"
+                }
             },
-            "dtm": {
-                "referenceTime": timestamp,
-                "sequenceNumber" : msg_sn,
-                "referencePosition": {
-                    "latitude": gps_latitude,
-                    "longitude": gps_longitude,
-                    "positionConfidenceEllipse": {
-                        "semiMajorConfidence": 4095,
-                        "semiMinorConfidence": 4095,
-                        "semiMajorOrientation": 900
-                    },
-                    "altitude": {
-                        "altitudeValue": gps_altitude,
-                        "altitudeConfidence": "unavailable"
-                    }
+            "modemStatus": {
+                "mcc": mcc,
+                "mnc": mnc,
+                "ratMode": ratmode,
+                "nr": {
+                    "rsrq": nr_rsrp,
+                    "rsrp": nr_rsrq,
+                    "snr": nr_snr,
+                    "pci": nr_pci
                 },
-                "modemStatus": {
-                    "mcc": mcc,
-                    "mnc": mnc,
-                    "ratMode": ratmode,
-                    "nr": {
-                        "rsrq": nr_rsrp,
-                        "rsrp": nr_rsrq,
-                        "snr": nr_snr,
-                        "pci": nr_pci
-                    },
-                    "lte": {
-                        "rsrq": lte_rsrp,
-                        "rsrp": lte_rsrq,
-                        "rssi": lte_rssi,
-                        "snr": lte_snr,
-                        "pci": lte_pci
-                    }
-                },
-                "networkLogs": {
-                    "messageDelay": es_broker_delay,
-                    "messageThroughput": {
-                        "rxBytes": es_broker_throughput[0],
-                        "txBytes": es_broker_throughput[1]
-                    }
-                }    
+                "lte": {
+                    "rsrq": lte_rsrp,
+                    "rsrp": lte_rsrq,
+                    "rssi": lte_rssi,
+                    "snr": lte_snr,
+                    "pci": lte_pci
+                }
             }
         }
-    }      
+    }
 
-    # Encode the structure with ASN.1 and convert to JSON
-    encoded_data = dtm.encode('DITTO-STRUCT', ditto_msg)
+    # TODO: Later on review ASN.1 Structure
 
-    print(f"\n\nEncoded data: {encoded_data}")
-
-    decoded_data = dtm.decode('DITTO-STRUCT', encoded_data)
-
-    print(f"Decoded data: {decoded_data}\n\n")
-
-    return json.dumps(decoded_data)
+    return json.dumps(ditto_msg)
 
 # Publish data to Hono's MQTT adapter
 def publish_to_mqtt(json_data):

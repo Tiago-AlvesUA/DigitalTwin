@@ -24,10 +24,6 @@ typedef struct mqtt_manager {
 
 typedef struct communications_manager {
 	mqtt_manager_t* mqtt_manager;
-	// SPVSMBody_t* spvsm_body;
-	// SNVSMBody_t* snvsm_body;
-	// SBVSMBody_t* sbvsm_body;
-	// OVSMBody_t* ovsm_body;
 	it2s_gnss_data_t* gps_data;
 	void* gnss_ctx;
 } communications_manager_t;

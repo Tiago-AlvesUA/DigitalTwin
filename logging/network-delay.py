@@ -97,6 +97,7 @@ def main():
         keyfile=broker_keyfile_path,
         ca_certs=broker_cafile_path,
     )
+    #client.tls_insecure_set(True)
 
     client.on_connect = on_connect
     client.on_subscribe = on_subscribe
