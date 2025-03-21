@@ -101,15 +101,17 @@ def on_message_cb(client, userdata, message):
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
-            id, timestamp, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
-            
-            exists_collision = check_collisions(sender_trajectory)
+            id, timestamp, sender_speed, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
+
+            # TODO: uncomment
+            exists_collision = check_collisions(id, sender_speed, sender_trajectory)
 
             # Local trajectories will track trajectories close to the vehicle
+            
             local_trajectories_json = create_trajectories_json(id, timestamp, sender_trajectory)
             update_ditto_trajectories(local_trajectories_json)
 
-            data_to_send = {"id": id, "trajectory": local_trajectories_json}
+            data_to_send = {"id": id, "senderTrajectory": local_trajectories_json}
             messages.put(json.dumps(data_to_send))
 
     elif (station_id != "22"):
