@@ -60,9 +60,9 @@ const CarTracking = () => {
             if (data["receiverTrajectory"]) {
 
               const car_id = data["id"];
-              console.log(data)
+              //console.log(data)
 
-              const newTrajectory = data.receiverTrajectory.map(([latitude, longitude]) => ({
+              const newTrajectory = data.receiverTrajectory.map(({ latitude, longitude }) => ({
                 lat: latitude/1e7,
                 lon: longitude/1e7,
                 type: "receiver",
@@ -72,7 +72,7 @@ const CarTracking = () => {
               newTrajectories[dummy_car_id] = newTrajectory; 
 
             } else if (data["senderTrajectory"]) {
-              console.log(data)
+              //console.log(data)
               const car_id = data["id"];
               const newTrajectory = data.senderTrajectory.properties[car_id].map(({ latitude, longitude }) => ({
                 lat: latitude / 1e7,
@@ -82,6 +82,29 @@ const CarTracking = () => {
               //console.log("Trajectory:", newTrajectory);
               newTrajectories[car_id] = newTrajectory;
             }
+
+            else if (data["senderInterpolatedPoints"]) {
+              const car_id = data["id"];
+              const newTrajectory = data.senderInterpolatedPoints.map(({ latitude, longitude }) => ({
+                lat: latitude / 1e7,
+                lon: longitude / 1e7,
+                type: "senderInterp",
+              }));
+
+              newTrajectories[car_id] = newTrajectory;
+            }
+
+            else if (data["receiverInterpolatedPoints"]) {
+              const car_id = data["id"];
+              const newTrajectory = data.receiverInterpolatedPoints.map(({ latitude, longitude }) => ({
+                lat: latitude / 1e7,
+                lon: longitude / 1e7,
+                type: "receiverInterp",
+              }));
+
+              newTrajectories[car_id] = newTrajectory;
+            }
+
             return newTrajectories;
           });
 
@@ -106,7 +129,7 @@ const CarTracking = () => {
     const getCarIcon = (type) =>
       L.icon({
         iconUrl: type === MessageType.AWARENESS ? "/static/iconAzul.png" : "/static/iconVermelho.png",
-        iconSize: [24, 24], 
+        iconSize: [16, 16], 
         iconAnchor: [16, 16], 
         popupAnchor: [0, -16], 
       });
@@ -115,27 +138,39 @@ const CarTracking = () => {
         <MapContainer center={[40.631021, -8.691643]} zoom={18} style={{ height: "100vh", width: "100%" }}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
             
-            {Object.entries(carMarkers).map(([id, { lat, lon, type }]) => (
-              <Marker key={id} position={[lat, lon]} icon={getCarIcon(type)}>
-                  <Popup>Car Position: {lat}, {lon}</Popup>
-              </Marker>
-            ))}
+            
 
             {Object.entries(carTrajectories).map(([id, trajectory]) => {
               // console.log(`Rendering trajectory for car ${id}`);
               return trajectory.map(({ lat, lon, type }, index) => {
-                  const circleColor = type === "receiver" ? "red" : "blue";
+                  let circleColor
+                  //const circleColor = type === "receiver" ? "red" : "blue";
+                  if (type === "receiver"){
+                    circleColor = "red";
+                  } else if (type === "sender"){
+                    circleColor = "blue";
+                  } else if (type === "senderInterp"){
+                    circleColor = "#ADD8E6";
+                  } else if (type === "receiverInterp"){
+                    circleColor = "#FFA07A";
+                  }
                   // console.log(`Rendering circle at ${lat}, ${lon}`);
                   return (
                       <Circle
                           key={`${id}-${index}`}
                           center={[lat, lon]}
                           radius={1}
-                          pathOptions={{ color: circleColor, fillColor: "blue", fillOpacity: 0.5 }}
+                          pathOptions={{ color: circleColor, fillOpacity: 0.5 }}
                       />
                   );
               });
             })}
+
+            {Object.entries(carMarkers).map(([id, { lat, lon, type }]) => (
+              <Marker key={id} position={[lat, lon]} icon={getCarIcon(type)}>
+                  <Popup>Car Position: {lat}, {lon}</Popup>
+              </Marker>
+            ))}
         </MapContainer>
         );
     };

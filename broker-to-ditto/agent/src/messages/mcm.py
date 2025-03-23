@@ -76,14 +76,75 @@ def linear_intermediate_points(idx, latitude, longitude, heading, speed):
     longitude = longitude * 1e7 * 180/math.pi
     heading = heading * 1e1 * 180/math.pi
 
+    pointCoordinates = Coordinates(int(latitude), int(longitude), int(heading))
     #print(f"Latitude: {latitude}, Longitude: {longitude}, Heading: {heading}, Speed: {speed}")
 
-    return (int(latitude), int(longitude))
+    return pointCoordinates
+    #return (int(latitude), int(longitude))
+
+
+def linear_interpolated_points(latitude, longitude, heading, distance):
+    R = 6371e3
+
+    latitude = latitude * 1e-7 * math.pi/180 
+    longitude = longitude * 1e-7 * math.pi/180 
+    heading = heading * 1e-1 * math.pi/180
+
+    latitude = math.asin(math.sin(latitude) * math.cos(distance/R) + math.cos(latitude) * math.sin(distance/R) * math.cos(heading))
+    longitude = longitude + math.atan2(math.sin(heading) * math.sin(distance/R) * math.cos(latitude), math.cos(distance/R) - math.sin(latitude) * math.sin(latitude))
+
+    latitude = latitude * 1e7 * 180/math.pi
+    longitude = longitude * 1e7 * 180/math.pi
+    heading = heading * 1e1 * 180/math.pi
+
+    pointCoordinates = Coordinates(int(latitude), int(longitude), int(heading))
+
+    return pointCoordinates
 
 
 # Calculate interpolated points of a trajectory
-def interpolated_points():
-    pass
+def interpolated_points(numInterpolatedPoints, maxInterpolatedDistance, distance, id, ownVehicleSpeed, refCoordinates: Coordinates, trajectory, otherVehicleSpeed):
+    
+    numIntermediatePoints = len(trajectory)
+    interpolatedPointsCoor = [[0 for j in range(numInterpolatedPoints)] for i in range(numIntermediatePoints)]
+
+    if ownVehicleSpeed > otherVehicleSpeed:
+
+        lastInterpolatedPointCoor = refCoordinates # Start point from reference coordinates
+
+        ## ?-----? ##
+        ## ?LANES? ##
+        ## ?-----? ##
+
+        for i in range(numIntermediatePoints):
+            if i > 0: # On i = 0, lastInterpolatedPointCoordinates are the reference (first) coordinates of the vehicle
+                lastInterpolatedPointCoor = trajectory[i-1]
+            for j in range(numInterpolatedPoints):
+                # TODO: Add non linear calculation of interpolated points
+                # TODO: Heading also needs to be changed to lastInterpolatedPointCoor.heading -> On MCMs, only the current state heading is correct (all headings on intermediate points are wrong)
+                interpolatedPointsCoor[i][j] = linear_interpolated_points(lastInterpolatedPointCoor.latitude, lastInterpolatedPointCoor.longitude, refCoordinates.heading, maxInterpolatedDistance)
+                lastInterpolatedPointCoor = interpolatedPointsCoor[i][j]
+    
+    else:
+        timeBetweenInterpolatedPoints = maxInterpolatedDistance / otherVehicleSpeed # m/(m/s) = s
+        interpolatedPointsDistance = timeBetweenInterpolatedPoints * ownVehicleSpeed; # s*(m/s) = m
+
+        lastInterpolatedPointCoor = refCoordinates
+    
+        
+        for i in range(numIntermediatePoints):
+            if i > 0:
+                lastInterpolatedPointCoor = trajectory[i-1]
+            for j in range(numInterpolatedPoints):
+                #print(lastInterpolatedPointCoor)
+                # TODO: Add non linear calculation of interpolated points
+                # TODO: Heading also needs to be changed to lastInterpolatedPointCoor.heading -> On MCMs, only the current state heading is correct (all headings on intermediate points are wrong)
+                interpolatedPointsCoor[i][j] = linear_interpolated_points(lastInterpolatedPointCoor.latitude, lastInterpolatedPointCoor.longitude, refCoordinates.heading, maxInterpolatedDistance)
+                lastInterpolatedPointCoor = interpolatedPointsCoor[i][j]
+
+    #print(interpolatedPointsCoor)
+    return interpolatedPointsCoor
+
 
 
 # Haversine formula to calculate the distance between two stations
@@ -91,8 +152,10 @@ def stations_distance(station1_point, station2_point):
 
     R = 6371e3 # Earth radius in meters
 
-    lat1, lon1 = station1_point
-    lat2, lon2 = station2_point 
+    lat1 = station1_point.latitude
+    lon1 = station1_point.longitude
+    lat2 = station2_point.latitude
+    lon2 = station2_point.longitude
 
     phi1 = lat1 * 1e-7 * math.pi/180
     phi2 = lat2 * 1e-7 * math.pi/180
@@ -110,13 +173,14 @@ def stations_distance(station1_point, station2_point):
     return R * c # Distance in meters
 
 
-def check_collisions(sender_id, sender_speed, sender_trajectory):
+def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
     ## TODO ## TODO ## ## TODO ## TODO ## ## TODO ## TODO ##
     # Sender trajectory now contains points with heading value -> Create arrays of 10, each position using coordinates class
     ## TODO ## TODO ## ## TODO ## TODO ## ## TODO ## TODO ##
 
     #### SENDER DATA ####
-    sender_vehicle = VehicleInfo(sender_id, sender_speed * 1e-2 * 0.5, sender_speed)
+    sender_vehicle = VehicleInfo(sender_id, sender_speed * 1e-2 * 0.5, sender_speed)   
+    senderCoordinates = Coordinates(sender_lat, sender_lon, sender_heading) # Contains the reference lat, lon, heading of the vehicle (where it is at right now)
     #####################
 
     collision_detected = False
@@ -139,55 +203,70 @@ def check_collisions(sender_id, sender_speed, sender_trajectory):
     ###receiver_vehicle = VehicleInfo(22, speed * 1e-2 * 0.5, speed)
     receiver_vehicle = VehicleInfo(22, 2501 * 1e-2 * 0.5, 2501)
 
+    # TODO: uncomment
+    #receiverCoordinates = Coordinates(latitude, longitude, heading)    # Contains the reference lat, lon, heading of the vehicle (where it is at right now)
+    receiverCoordinates = Coordinates(406338708, -86781111, 2571) #DUMMY
+
     receiver_trajectory = [0] * 10
 
     for i in range(10):
         ###receiver_trajectory[i] = linear_intermediate_points(i, latitude, longitude, heading, speed)
         # TODO: uncomment - doing with dummy values before having connection to the 
         #receiver_trajectory[i] = linear_intermediate_points(i, latitude, longitude, heading, speed)
-        receiver_trajectory[i] = linear_intermediate_points(i, 406294531, -87366649, 2899, 2500) # DUMMY values -> TODO: to remove
+        receiver_trajectory[i] = linear_intermediate_points(i, 406338708, -86781111, 2571, 2501) # DUMMY values -> TODO: to remove
 
-    data_to_send = {"id": 23, "receiverTrajectory": receiver_trajectory}
+    # TODO: id should not be put manually
+    data_to_send = {"id": 23, "receiverTrajectory": [vars(coord) for coord in receiver_trajectory]}
+    #print(data_to_send)
     messages.put(json.dumps(data_to_send))
     #######################
 
 
     # TODO: Before calculating, check if distance between points for sender or receiver is bigger than 2 meters
     numInterpolatedPoints = 0
-    maxInterpolatedPointsDistance = 2 # TODO: Distância configurável (e não apenas 2 metros)
+    maxInterpolatedPointsDistance = 5 # TODO (professor): Distância configurável (e não apenas 2 metros)
 
     # Number of interpolated points calculated of the higher speed
     if sender_vehicle.get_speed() > receiver_vehicle.get_speed():
-        if sender_vehicle.get_distance > 2: # only calculate interpolated points if distance between intermediate points is bigger than 2 meters
+        if sender_vehicle.get_distance > 5: # only calculate interpolated points if distance between intermediate points is bigger than 2 meters
             numInterpolatedPoints = math.floor(sender_vehicle.get_distance()/maxInterpolatedPointsDistance)
     else:
-        if receiver_vehicle.get_distance() > 2:
+        if receiver_vehicle.get_distance() > 5:
             numInterpolatedPoints = math.floor(receiver_vehicle.get_distance()/maxInterpolatedPointsDistance)
 
     print(numInterpolatedPoints)
 
-    # TODO TODO TODO TODO
-    # TODO: - Get senderCoordinates and receiverCoordinates(reference position)
-    #if numInterpolatedPoints > 0:
+    if numInterpolatedPoints > 0:
         # sender trajectory is the equivalent to senderIntermediatePointsCoor (without the heading)
-        #interpolated_points(numInterpolatedPoints, maxInterpolatedPointsDistance, sender_vehicle.get_distance(), sender_vehicle.get_id(), sender_vehicle.get_speed(), senderCoordinates, sender_trajectory)
+        #print("SENDER TRAJECTORY",sender_trajectory)
+        senderInterpolatedPoints = interpolated_points(numInterpolatedPoints, maxInterpolatedPointsDistance, sender_vehicle.get_distance(), sender_vehicle.get_id(), sender_vehicle.get_speed(), senderCoordinates, sender_trajectory, receiver_vehicle.get_speed())
+        receiverInterpolatedPoints = interpolated_points(numInterpolatedPoints, maxInterpolatedPointsDistance, receiver_vehicle.get_distance(), receiver_vehicle.get_id(), receiver_vehicle.get_speed(), receiverCoordinates, receiver_trajectory, sender_vehicle.get_speed())
 
-    # # print(f"Receiver Trajectory: {receiver_trajectory}\n")
-    # for i in range(10):
-    #     # Switch 4 to minSafeDistance
-    #     if stations_distance(receiver_trajectory[i], sender_trajectory[i]) < 4:
-    #         print(f"Collision detected between receiver and sender at point {i}")
-    #         print(f"latitude: {receiver_trajectory[i][0]}, longitude: {receiver_trajectory[i][1]}")
-    #         print(f"latitude: {sender_trajectory[i][0]}, longitude: {sender_trajectory[i][1]}")
-    #         collision_detected = True
-    #         break
-    #     #else:
-    #         #print(f"Stations distance: {stations_distance(receiver_trajectory[i], sender_trajectory[i])}")
+    # DUMMY IDs, so it does not overlap in frontend!?
+    data_to_send = {"id": 25, "senderInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in senderInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    messages.put(json.dumps(data_to_send))
+    data_to_send = {"id": 30, "receiverInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in receiverInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    print(data_to_send)
+    messages.put(json.dumps(data_to_send))
 
-    #     # if (numInterpolatedPoints > 0):
-    #     #     for j in range(numInterpolatedPoints):
-    #     #         if stationsDistance(interpolatedPoints[j], other_trajectory[i]) < 4:
-    #     #             collision_detected = True
+    # TODO maybe change to not be length of sender_trajectory -> it was range(10) but sometimes trajectory from MCM does not have 10 intermediate points
+    for i in range(len(sender_trajectory)):
+        # Switch 4 to minSafeDistance
+        print(f"Stations distance: {stations_distance(receiver_trajectory[i], sender_trajectory[i])}")
+        if stations_distance(receiver_trajectory[i], sender_trajectory[i]) < 4:
+            print(f"Collision detected between receiver and sender at point {i}")
+            print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
+            print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
+            collision_detected = True
+
+        # TODO: This if inside the other?
+        if (numInterpolatedPoints > 0):
+            for j in range(numInterpolatedPoints):
+                if stations_distance(receiverInterpolatedPoints[i][j], senderInterpolatedPoints[i][j]) < 4:
+                    print(f"Collision detected between receiver and sender at interpolated point {i},{j}")
+                    print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
+                    print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
+                    collision_detected = True
 
     return collision_detected
 
@@ -204,15 +283,14 @@ def create_trajectories_json(id, timestamp, local_trajectories):
 
     if local_trajectories != []:
 
-        print(local_trajectories)
+        #print(local_trajectories)
         for point in local_trajectories:
             if point == 0:
                 continue
-            lat, lon, heading = point
             objects_json["properties"][id].append({
-                "latitude": lat,
-                "longitude": lon,
-                "heading": heading
+                "latitude": point.latitude,
+                "longitude": point.longitude,
+                "heading": point.heading
             })
 
     return objects_json
@@ -239,7 +317,11 @@ def mcm_to_local_trajectory(last_update_time, payload):
     referenceLat = payload["payload"]["basicContainer"]["referencePosition"]["latitude"]
     referenceLon = payload["payload"]["basicContainer"]["referencePosition"]["longitude"]
 
+    referenceLatPoint = referenceLat
+    referenceLonPoint = referenceLon
+
     mcm = payload["payload"]["mcmContainer"]
+    referenceHeading = mcm["vehiclemaneuverContainer"]["vehicleCurrentState"]["heading"]["headingValue"]
 
     speed = mcm["vehiclemaneuverContainer"]["vehicleCurrentState"]["speed"]["speedValue"]
 
@@ -249,24 +331,26 @@ def mcm_to_local_trajectory(last_update_time, payload):
     # TODO: Change obtaining of lat and lon (use delta lat and delta lon)
     #local_trajectories = [(point["latitudePosition"], point["longitudePosition"]) for point in trajectory_points]
     #trajectory = [(point["latitudePosition"], point["longitudePosition"]) for point in trajectory_points]
-    trajectory = [0] * 10
-    i=0
+    
+    trajectory = []
+    #i=0
     for intermeadiatePoint in trajectory_points:
-        referenceHeading = intermeadiatePoint["intermediatePoint"]["reference"]["referenceHeading"]["headingValue"]
+        referenceHeadingPoint = intermeadiatePoint["intermediatePoint"]["reference"]["referenceHeading"]["headingValue"]
         
         deltaLat = intermeadiatePoint["intermediatePoint"]["reference"]["deltaReferencePosition"]["deltaLatitude"]
         deltaLon = intermeadiatePoint["intermediatePoint"]["reference"]["deltaReferencePosition"]["deltaLongitude"]
 
-        lat = referenceLat + deltaLat
-        lon = referenceLon + deltaLon
+        lat = referenceLatPoint + deltaLat
+        lon = referenceLonPoint + deltaLon
 
-        trajectory[i] = (lat,lon,referenceHeading)
+        #trajectory[i] = Coordinates(lat,lon,referenceHeadingPoint)
+        trajectory.append(Coordinates(lat,lon,referenceHeadingPoint))
 
-        referenceLat = lat
-        referenceLon = lon
+        referenceLatPoint = lat
+        referenceLonPoint = lon
 
-        i = i+1
+        #i = i+1
 
     #print("Local Trajectories: ", local_trajectories)
 
-    return device_id, timestamp, speed, trajectory #, local_trajectories
+    return device_id, timestamp, speed, referenceLat, referenceLon, referenceHeading, trajectory #, local_trajectories

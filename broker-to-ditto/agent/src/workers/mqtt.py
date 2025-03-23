@@ -101,13 +101,14 @@ def on_message_cb(client, userdata, message):
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
-            id, timestamp, sender_speed, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
+            id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
             # TODO: uncomment
-            exists_collision = check_collisions(id, sender_speed, sender_trajectory)
+            exists_collision = check_collisions(id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
 
             # Local trajectories will track trajectories close to the vehicle
             
+            # TODO: need to test updating Coordinates to ditto (check if structure is right)
             local_trajectories_json = create_trajectories_json(id, timestamp, sender_trajectory)
             update_ditto_trajectories(local_trajectories_json)
 
