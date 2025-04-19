@@ -1,0 +1,20 @@
+Distance between receiver Coordinates(latitude=406338707, longitude=-86781110, heading=2571) and Coordinates(latitude=406338224, longitude=-86783234, heading=3601) is:
+Stations distance: 18.71061215504296
+Distance between receiver Coordinates(latitude=406338456, longitude=-86782555, heading=2571) and Coordinates(latitude=406338033, longitude=-86784094, heading=3601) is:
+Stations distance: 13.812283893554529
+Distance between receiver Coordinates(latitude=406338205, longitude=-86784000, heading=2571) and Coordinates(latitude=406337843, longitude=-86784959, heading=3601) is:
+Stations distance: 9.038289608365064
+Distance between receiver Coordinates(latitude=406337954, longitude=-86785444, heading=2571) and Coordinates(latitude=406337644, longitude=-86785814, heading=3601) is:
+Stations distance: 4.6508480879196155
+Distance between receiver Coordinates(latitude=406337703, longitude=-86786889, heading=2571) and Coordinates(latitude=406337449, longitude=-86786678, heading=3601) is:
+Stations distance: 3.3387397764316957
+Distance between receiver Coordinates(latitude=406337452, longitude=-86788333, heading=2571) and Coordinates(latitude=406337249, longitude=-86787549, heading=3601) is:
+Stations distance: 6.990227800708623
+Distance between receiver Coordinates(latitude=406337201, longitude=-86789778, heading=2571) and Coordinates(latitude=406337046, longitude=-86788404, heading=3601) is:
+Stations distance: 11.721835168204363
+Distance between receiver Coordinates(latitude=406336950, longitude=-86791222, heading=2571) and Coordinates(latitude=406336855, longitude=-86789266, heading=3601) is:
+Stations distance: 16.53938703022656
+Distance between receiver Coordinates(latitude=406336699, longitude=-86792667, heading=2571) and Coordinates(latitude=406336667, longitude=-86790139, heading=3601) is:
+Stations distance: 21.335389363863392
+Distance between receiver Coordinates(latitude=406336448, longitude=-86794111, heading=2571) and Coordinates(latitude=406336469, longitude=-86791004, heading=3601) is:
+Stations distance: 26.219337885863105

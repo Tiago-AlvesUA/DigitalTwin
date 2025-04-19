@@ -62,10 +62,10 @@ const CarTracking = () => {
               const car_id = data["id"];
               //console.log(data)
 
-              const newTrajectory = data.receiverTrajectory.map(({ latitude, longitude }) => ({
+              const newTrajectory = data.receiverTrajectory.map(({ latitude, longitude, collision }) => ({
                 lat: latitude/1e7,
                 lon: longitude/1e7,
-                type: "receiver",
+                type: collision === "yes" ? "receiverCollision" : "receiver",
               }));
 
               let dummy_car_id = car_id + 1; // TODO: remove and leave car_id as normal
@@ -73,22 +73,34 @@ const CarTracking = () => {
 
             } else if (data["senderTrajectory"]) {
               //console.log(data)
+              // const car_id = data["id"];
+              // const newTrajectory = data.senderTrajectory.properties[car_id].map(({ latitude, longitude }) => ({
+              //   lat: latitude / 1e7,
+              //   lon: longitude / 1e7,
+              //   type: "sender",
+              // }));
+              // //console.log("Trajectory:", newTrajectory);
+              // newTrajectories[car_id] = newTrajectory;
+
               const car_id = data["id"];
-              const newTrajectory = data.senderTrajectory.properties[car_id].map(({ latitude, longitude }) => ({
-                lat: latitude / 1e7,
-                lon: longitude / 1e7,
-                type: "sender",
+              //console.log(data)
+
+              const newTrajectory = data.senderTrajectory.map(({ latitude, longitude, collision }) => ({
+                lat: latitude/1e7,
+                lon: longitude/1e7,
+                type: collision === "yes" ? "senderCollision" : "sender",
               }));
-              //console.log("Trajectory:", newTrajectory);
-              newTrajectories[car_id] = newTrajectory;
+
+              let dummy_car_id = car_id + 1; // TODO: remove and leave car_id as normal
+              newTrajectories[dummy_car_id] = newTrajectory; 
             }
 
             else if (data["senderInterpolatedPoints"]) {
               const car_id = data["id"];
-              const newTrajectory = data.senderInterpolatedPoints.map(({ latitude, longitude }) => ({
+              const newTrajectory = data.senderInterpolatedPoints.map(({ latitude, longitude, collision }) => ({
                 lat: latitude / 1e7,
                 lon: longitude / 1e7,
-                type: "senderInterp",
+                type: collision === "yes" ? "senderInterpCollision" : "senderInterp",
               }));
 
               newTrajectories[car_id] = newTrajectory;
@@ -96,10 +108,10 @@ const CarTracking = () => {
 
             else if (data["receiverInterpolatedPoints"]) {
               const car_id = data["id"];
-              const newTrajectory = data.receiverInterpolatedPoints.map(({ latitude, longitude }) => ({
+              const newTrajectory = data.receiverInterpolatedPoints.map(({ latitude, longitude, collision }) => ({
                 lat: latitude / 1e7,
                 lon: longitude / 1e7,
-                type: "receiverInterp",
+                type: collision === "yes" ? "receiverInterpCollision" : "receiverInterp",
               }));
 
               newTrajectories[car_id] = newTrajectory;
@@ -153,6 +165,8 @@ const CarTracking = () => {
                     circleColor = "#ADD8E6";
                   } else if (type === "receiverInterp"){
                     circleColor = "#FFA07A";
+                  } else if (type.includes("Collision")){
+                    circleColor = "black";
                   }
                   // console.log(`Rendering circle at ${lat}, ${lon}`);
                   return (

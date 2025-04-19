@@ -173,10 +173,12 @@ def stations_distance(station1_point, station2_point):
     return R * c # Distance in meters
 
 
-def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
+def check_point_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
     ## TODO ## TODO ## ## TODO ## TODO ## ## TODO ## TODO ##
     # Sender trajectory now contains points with heading value -> Create arrays of 10, each position using coordinates class
     ## TODO ## TODO ## ## TODO ## TODO ## ## TODO ## TODO ##
+    #print(f"Sender Trajectory: ",sender_trajectory)
+
 
     #### SENDER DATA ####
     sender_vehicle = VehicleInfo(sender_id, sender_speed * 1e-2 * 0.5, sender_speed)   
@@ -205,20 +207,25 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
 
     # TODO: uncomment
     #receiverCoordinates = Coordinates(latitude, longitude, heading)    # Contains the reference lat, lon, heading of the vehicle (where it is at right now)
-    receiverCoordinates = Coordinates(406338708, -86781111, 2571) #DUMMY
-
+    # ### DIAGONAL TRAJECTORY ###
+    receiverCoordinates = Coordinates(406318981, -86903491, 2000) #DUMMY
+    # receiverCoordinates = CoorcoordUTM[1]dinates(406265817, -87292122, 3018)
+    #40.631898, -8.690349
     receiver_trajectory = [0] * 10
 
     for i in range(10):
         ###receiver_trajectory[i] = linear_intermediate_points(i, latitude, longitude, heading, speed)
         # TODO: uncomment - doing with dummy values before having connection to the 
         #receiver_trajectory[i] = linear_intermediate_points(i, latitude, longitude, heading, speed)
-        receiver_trajectory[i] = linear_intermediate_points(i, 406338708, -86781111, 2571, 2501) # DUMMY values -> TODO: to remove
+        # previous heading: 2571
+        # ### DIAGONAL TRAJECTORY ###
+        receiver_trajectory[i] = linear_intermediate_points(i, 406318981, -86903491, 2000, 2501) # DUMMY values -> TODO: to remove
+        # receiver_trajectory[i] = linear_intermediate_points(i, 406265817, -87292122, 3018, 2501) # DUMMY
+
+
 
     # TODO: id should not be put manually
-    data_to_send = {"id": 23, "receiverTrajectory": [vars(coord) for coord in receiver_trajectory]}
-    #print(data_to_send)
-    messages.put(json.dumps(data_to_send))
+    
     #######################
 
 
@@ -234,7 +241,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         if receiver_vehicle.get_distance() > 5:
             numInterpolatedPoints = math.floor(receiver_vehicle.get_distance()/maxInterpolatedPointsDistance)
 
-    print(numInterpolatedPoints)
+    #print(numInterpolatedPoints)
 
     if numInterpolatedPoints > 0:
         # sender trajectory is the equivalent to senderIntermediatePointsCoor (without the heading)
@@ -242,31 +249,46 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         senderInterpolatedPoints = interpolated_points(numInterpolatedPoints, maxInterpolatedPointsDistance, sender_vehicle.get_distance(), sender_vehicle.get_id(), sender_vehicle.get_speed(), senderCoordinates, sender_trajectory, receiver_vehicle.get_speed())
         receiverInterpolatedPoints = interpolated_points(numInterpolatedPoints, maxInterpolatedPointsDistance, receiver_vehicle.get_distance(), receiver_vehicle.get_id(), receiver_vehicle.get_speed(), receiverCoordinates, receiver_trajectory, sender_vehicle.get_speed())
 
-    # DUMMY IDs, so it does not overlap in frontend!?
-    data_to_send = {"id": 25, "senderInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in senderInterpolatedPoints for interpolatedPoint in intermediatePoint]}
-    messages.put(json.dumps(data_to_send))
-    data_to_send = {"id": 30, "receiverInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in receiverInterpolatedPoints for interpolatedPoint in intermediatePoint]}
-    print(data_to_send)
-    messages.put(json.dumps(data_to_send))
+    
 
     # TODO maybe change to not be length of sender_trajectory -> it was range(10) but sometimes trajectory from MCM does not have 10 intermediate points
     for i in range(len(sender_trajectory)):
         # Switch 4 to minSafeDistance
-        print(f"Stations distance: {stations_distance(receiver_trajectory[i], sender_trajectory[i])}")
+        #print(f"Distance between receiver {receiver_trajectory[i]} and {sender_trajectory[i]} is:")
+        #print(f"Stations distance: {stations_distance(receiver_trajectory[i], sender_trajectory[i])}")
         if stations_distance(receiver_trajectory[i], sender_trajectory[i]) < 4:
-            print(f"Collision detected between receiver and sender at point {i}")
-            print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
-            print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
+            #print(f"Collision detected between receiver and sender at point {i}")
+            #print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
+            #print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
             collision_detected = True
+            receiver_trajectory[i].collision = "yes"
+            sender_trajectory[i].collision = "yes"
 
         # TODO: This if inside the other?
         if (numInterpolatedPoints > 0):
             for j in range(numInterpolatedPoints):
                 if stations_distance(receiverInterpolatedPoints[i][j], senderInterpolatedPoints[i][j]) < 4:
-                    print(f"Collision detected between receiver and sender at interpolated point {i},{j}")
-                    print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
-                    print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
+                    #print(f"Collision detected between receiver and sender at interpolated point {i},{j}")
+                    #print(f"latitude: {receiver_trajectory[i].latitude}, longitude: {receiver_trajectory[i].longitude}")
+                    #print(f"latitude: {sender_trajectory[i].latitude}, longitude: {sender_trajectory[i].longitude}")
                     collision_detected = True
+                    receiverInterpolatedPoints[i][j].collision = "yes"
+                    senderInterpolatedPoints[i][j].collision = "yes"
+
+
+    data_to_send = {"id": sender_id, "senderTrajectory": [vars(coord) for coord in sender_trajectory]}
+    messages.put(json.dumps(data_to_send))
+
+    data_to_send = {"id": 23, "receiverTrajectory": [vars(coord) for coord in receiver_trajectory]}
+    #print(data_to_send)
+    messages.put(json.dumps(data_to_send))
+
+    # DUMMY IDs, so it does not overlap in frontend!?
+    data_to_send = {"id": 25, "senderInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in senderInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    messages.put(json.dumps(data_to_send))
+    data_to_send = {"id": 30, "receiverInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in receiverInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    #print(data_to_send)
+    messages.put(json.dumps(data_to_send))
 
     return collision_detected
 

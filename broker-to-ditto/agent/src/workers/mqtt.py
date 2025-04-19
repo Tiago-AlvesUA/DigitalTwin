@@ -8,16 +8,21 @@ from utils.ditto import update_ditto_trajectories, update_ditto_perception, upda
 from utils.logger import bcolors 
 from messages.cpm import cpm_to_local_perception, create_perception_json
 from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json
-from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_collisions
+from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
+from utils.check_collisions import check_collisions
 # TODO: remove GLOBAL VARS and switch for a shared memory or queue with an interface
 #import global_vars
 from workers.shared_memory import messages
+from utils.ditto import update_speed
 
 current_original_topic = "placeholder"
 current_subscribed_topics = set()
 #local_awareness = []        # TODO
 #local_trajectories = []         # TODO
 
+last_collision_timestamp = None
+avoidanceBrakingTime = 0.9 # seconds
+avoidanceSpeedReduction = -5 # m/s
 own_trajectory = [] # TODO: Not used anymore
 
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
@@ -66,6 +71,9 @@ def manage_current_tile(message):
 def on_message_cb(client, userdata, message):
     station_id = message.topic.split("/")[3]
 
+    # TODO: remove
+    if int(station_id) > 1000:
+        pass
     # TODO: Differentiate MCMs from the own DT from others? (if station = 22 or not)    
     # if ("MCM" in message.topic):
     #     time_diff = time.time() - global_vars.last_local_trajectories_update
@@ -101,19 +109,36 @@ def on_message_cb(client, userdata, message):
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
-            id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
+            sender_id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
-            # TODO: uncomment
-            exists_collision = check_collisions(id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+            just_to_get_the_trajectories_on_the_map = check_point_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+            
+            # Check if there is collision and get the vehicle id that needs to brake or regain speed
+            exists_collision, vehicle_id = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+            brake_executed = False
+            if (exists_collision):
+                last_collision_timestamp = time.time()
+                bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
+                bcolors.log_warning_red(f"Vehicle {vehicle_id} must brake")
+                # TODO: for now thing id is hardcoded (because i need to see it on ditto and i only have one device on ditto for now), but should be changed
+                update_speed(avoidanceSpeedReduction, "org.acme:my-device-1")
+                brake_executed = True
+                # TODO: Publish to ditto the braking action
+            else:
+                if (brake_executed):
+                    if (time.time() - last_collision_timestamp > avoidanceBrakingTime):
+                        bcolors.log_warning_blue("Vehicle can go back to normal speed")
+                        update_speed(-avoidanceSpeedReduction, "org.acme:my-device-1")
 
+            print()
             # Local trajectories will track trajectories close to the vehicle
             
             # TODO: need to test updating Coordinates to ditto (check if structure is right)
-            local_trajectories_json = create_trajectories_json(id, timestamp, sender_trajectory)
+            local_trajectories_json = create_trajectories_json(sender_id, timestamp, sender_trajectory)
             update_ditto_trajectories(local_trajectories_json)
 
-            data_to_send = {"id": id, "senderTrajectory": local_trajectories_json}
-            messages.put(json.dumps(data_to_send))
+            #data_to_send = {"id": id, "senderTrajectory": local_trajectories_json}
+            #messages.put(json.dumps(data_to_send))
 
     elif (station_id != "22"):
         if ("CPM" in message.topic):

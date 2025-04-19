@@ -90,8 +90,14 @@ def cam_to_local_awareness(last_update_time, payload):
     local_awareness = []
 
     timestamp = payload["cam"]["generationDeltaTime"]
-    
-    obj_id = payload["header"]["stationId"]
+
+    #print(f"Payload: {payload}")
+
+    #obj_id = payload["header"]["stationId"]
+    header = payload.get("header", {})
+    obj_id = header.get("stationId") or header.get("stationID")
+    if not obj_id:
+        return
 
     obj_type = payload["cam"]["camParameters"]["basicContainer"]["stationType"]
     obj_lat = payload["cam"]["camParameters"]["basicContainer"]["referencePosition"]["latitude"]

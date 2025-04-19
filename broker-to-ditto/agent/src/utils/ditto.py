@@ -52,3 +52,18 @@ def get_dynamics():
     response = requests.get(url, headers=headers, auth=(DITTO_USERNAME, DITTO_PASSWORD))
     dynamics = response.json()
     return dynamics
+
+
+def update_speed(data, thing_id):
+    url = f"{DITTO_BASE_URL}/{thing_id}/inbox/messages/UpdateSpeed"
+    print(f" URL: {url}")
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    payload = {
+        "speed": data
+    }
+    response = requests.post(url, headers=headers, auth=(DITTO_USERNAME, DITTO_PASSWORD), json=payload)
+    if response.status_code == 200:
+        print("Speed updated successfully.")
+    else:
+        print(f"Failed to update speed. Status code: {response.status_code}")
+        print("Response: ", response.text)
