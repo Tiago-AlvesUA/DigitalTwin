@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: ''
+    type: file
+    options:
+      # /etc/grafana/provisioning tells grafana configurations to load at startup
+      path: /etc/grafana/provisioning/dashboards
