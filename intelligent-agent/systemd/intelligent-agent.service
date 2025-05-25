@@ -1,0 +1,13 @@
+[Unit]
+Description=MQTT Broker to Ditto Bridge Daemon
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/broker-to-ditto
+Environment="PATH=/home/ubuntu/broker-to-ditto/venv-name/bin"
+ExecStart=/home/ubuntu/broker-to-ditto/venv-name/bin/python /home/ubuntu/broker-to-ditto/daemon.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
