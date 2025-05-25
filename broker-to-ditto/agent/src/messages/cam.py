@@ -79,6 +79,38 @@ def obtain_dynamics(payload):
     return device_id, dynamics
 
 
+def cam_to_path_history(payload):
+    payload = json.loads(payload)
+
+    cam = payload["cam"]["camParameters"]
+
+    referenceLat = cam["basicContainer"]["referencePosition"]["latitude"]
+    referenceLon = cam["basicContainer"]["referencePosition"]["longitude"]
+
+    if "lowFrequencyContainer" in cam:
+
+        path_history = cam["lowFrequencyContainer"]["basicVehicleContainerLowFrequency"]["pathHistory"]
+
+        # Extract the path history points
+        path_points = []
+        for point in path_history:
+            deltaLat = point["pathPosition"]["deltaLatitude"]
+            deltaLon = point["pathPosition"]["deltaLongitude"]
+
+            # TODO: Check if i need to divide by 1e7
+            lat = referenceLat + deltaLat
+            lon = referenceLon + deltaLon
+
+            path_points.append((lat/1e7, lon/1e7))
+
+            referenceLat = lat
+            referenceLon = lon
+
+        return path_points
+    
+    else:
+        return []
+
 
 def cam_to_local_awareness(last_update_time, payload):
     #global local_awareness

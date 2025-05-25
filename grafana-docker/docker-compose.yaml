@@ -8,7 +8,6 @@ services:
       - '3000:3000'
     volumes:
       - grafana-storage:/var/lib/grafana
-      # TODO: comment or uncomment
       - ./provisioning:/etc/grafana/provisioning
       - ./plugins:/var/lib/grafana/plugins
 volumes:

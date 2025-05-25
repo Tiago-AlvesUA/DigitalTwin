@@ -3,7 +3,7 @@ import threading
 import asyncio
 from workers.mqtt import setup_initial_mqtt
 from workers.webserver import start_websocket_server, send_to_visualizer
-from workers.shared_memory import messages
+from workers.shared_memory import messages, mjpeg_frames
 
 def subscribe_to_get_vehicle_area():
     """ Subscribes to the own vehicle messages to get the current location. """

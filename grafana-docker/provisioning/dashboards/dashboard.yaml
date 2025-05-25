@@ -6,5 +6,4 @@ providers:
     folder: ''
     type: file
     options:
-      # /etc/grafana/provisioning tells grafana configurations to load at startup
       path: /etc/grafana/provisioning/dashboards

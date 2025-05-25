@@ -4,8 +4,10 @@ MQTT_INITIAL_TOPIC = "its_center/inqueue/json/22/#" # TODO: Usage of geographica
 MQTT_USERNAME = "it2s"
 MQTT_PASSWORD = "it2sit2s"
 
-DITTO_BASE_URL = "http://localhost:8080/api/2/things"
-DITTO_THING_ID = "org.acme:my-device-1" # TODO: This can be dynamic (getting the device name), from the toml file
+#DITTO_BASE_URL = "http://localhost:8080/api/2/things"
+DITTO_BASE_URL = "http://10.255.41.221:8080/api/2/things"
+#DITTO_THING_ID = "org.acme:my-device-1" # TODO: This can be dynamic (getting the device name), from the toml file
+DITTO_THING_ID = "org.acme:my-device-2" # TODO: This can be dynamic (getting the device name), from the toml file
 DITTO_USERNAME = 'ditto'
 DITTO_PASSWORD = 'ditto'
 

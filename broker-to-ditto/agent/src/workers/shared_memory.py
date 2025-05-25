@@ -5,6 +5,8 @@ message_queue = multiprocessing.Queue()
 
 messages = queue.Queue()
 
+mjpeg_frames = queue.Queue()
+
 
 # class SharedQueue:
 #     @staticmethod

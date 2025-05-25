@@ -7,9 +7,9 @@ from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_
 from utils.ditto import update_ditto_trajectories, update_ditto_perception, update_ditto_awareness, update_ditto_dynamics
 from utils.logger import bcolors 
 from messages.cpm import cpm_to_local_perception, create_perception_json
-from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json
+from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json, cam_to_path_history
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
-from utils.check_collisions import check_collisions
+from utils.check_collisions import check_collisions, draw_path_history
 # TODO: remove GLOBAL VARS and switch for a shared memory or queue with an interface
 #import global_vars
 from workers.shared_memory import messages
@@ -102,10 +102,16 @@ def on_message_cb(client, userdata, message):
             data_to_send = {"id": id, "dynamics": dynamics}
             #SharedQueue.add_message(json.dumps(data_to_send))
             #add_message_to_queue(json.dumps(data_to_send))
-            messages.put(json.dumps(data_to_send))
+            # TODO
+            #messages.put(json.dumps(data_to_send))
             #global_vars.message_queue.put(json.dumps(data_to_send))
 
-        # TODO: Change for below (MCMs must be received by other stations)
+            # Get the path history from CAM to draw it on the simulation
+            path_history = cam_to_path_history(message.payload)
+            #print(f"Path history of 22: {path_history}")
+            draw_path_history("receiver", path_history)
+
+        # TODO: Change for below (MCMs must be received by other stations, not station 22 that is the own vehicle)
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
@@ -155,7 +161,8 @@ def on_message_cb(client, userdata, message):
             data_to_send = {"perception":local_perception_json}
             #SharedQueue.add_message(json.dumps(data_to_send))
             #put_message(json.dumps(data_to_send))
-            messages.put(json.dumps(data_to_send))
+            #TODO
+            #messages.put(json.dumps(data_to_send))
             #global_vars.message_queue.put(json.dumps(data_to_send))
 
         elif ("CAM" in message.topic):
@@ -171,11 +178,15 @@ def on_message_cb(client, userdata, message):
             data_to_send = {"id": id, "awareness":local_awareness_json}
             #SharedQueue.add_message(json.dumps(data_to_send))
             #put_message(json.dumps(data_to_send))
-            messages.put(json.dumps(data_to_send))
+            #TODO
+            #messages.put(json.dumps(data_to_send))
             #global_vars.message_queue.put(json.dumps(data_to_send))
+
+            # Get the path history from CAM to draw it on the simulation
+            path_history = cam_to_path_history(message.payload)
+            draw_path_history("sender", path_history)
     
             
- 
 
 def on_connect_cb(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:

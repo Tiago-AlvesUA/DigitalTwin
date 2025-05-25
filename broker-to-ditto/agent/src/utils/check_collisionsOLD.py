@@ -10,10 +10,6 @@ import pymunk
 import pymunk.pygame_util
 import pygame
 import os
-from PIL import Image
-import numpy as np
-import io
-from workers.shared_memory import messages
 
 time_elapsed = 0.0
 collision_time = None
@@ -21,7 +17,6 @@ pygame.init()
 WIDTH, HEIGHT = 500, 300
 window = pygame.Surface((WIDTH, HEIGHT))
 frames_idx = 0
-
 
 def compass_to_trigonometric_angle(degrees_heading):
     return math.radians(90 - degrees_heading)
@@ -45,40 +40,12 @@ def coordinates_to_utm(coord):
 
     return (x,y)
 
-
-def draw_path_history(vehicle_type, path_history):
-    global window
-
-    #print(f"Path history: {path_history}")
-
-    if vehicle_type == "sender":
-        color = (0, 0, 255, 255) # Blue
-    elif vehicle_type == "receiver":
-        #color = (255, 0, 0, 255) # Red
-        # TODO: Remove this blue color
-        color = (0, 0, 255, 255)
-    else:
-        return
-    
-    # Transform each coordinate in the path history to UTM
-    for point in path_history:
-        point_position = coordinates_to_utm(point)
-        # Apply same transform as draw_options.transform (flip Y and translate to center)
-        screen_x = int(point_position[0] + WIDTH // 2)
-        screen_y = int(-point_position[1] + HEIGHT // 2)
-
-        # Check bounds to avoid crashing or drawing off-screen
-        if 0 <= screen_x < WIDTH and 0 <= screen_y < HEIGHT:
-            pygame.draw.circle(window, color, (screen_x, screen_y), 4)
-
-
 def create_vehicle(space, position, mass, width, length, heading, speed, color):
     # Since pymunk does not care about length, it just draws a rectangle where width is aligned with the x-axis and height with the y-axis, we need to switch width and length
     box_width = length
     box_height = width
     body = pymunk.Body(mass, pymunk.moment_for_box(mass, (box_width, box_height))) # Moment for box calculates moment of intertia, which is necessary to determine resistance to rotational motion (and behave more realistically)
     x, y = position
-    print(f"Vehicle Position: {position}")
     body.position = (x,y)
     body.angle = heading
     # Using initial speed to calculate velocity
@@ -143,7 +110,6 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     sender_heading = compass_to_trigonometric_angle(sender_heading/10)
     receiver_heading = compass_to_trigonometric_angle(2000/10)
 
-
     # TODO: Check how i should introduce speed for the simulated vehicle
     sender_body, sender_shape = create_vehicle(space, sender_position, 10, 1.8, 4.3, sender_heading, sender_speed*1e-2, color=(0, 0, 255, 255)) # blue
     receiver_body, receiver_shape = create_vehicle(space, receiver_position, 10, 1.8, 4.3, receiver_heading, 2500*1e-2, color=(255, 0, 0, 255)) # red
@@ -173,28 +139,13 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         space.step(dt) # Step the physics simulation
         time_elapsed += dt
 
-    # frame_name = f"frame_{frames_idx}.jpg"
-    # output_dir = "simulation_frames"
-    data = pygame.surfarray.array3d(window)
-    image = Image.fromarray(np.transpose(data, (1, 0, 2)))
-    buf = io.BytesIO()
-    image.save(buf, format='JPEG')
-    # show image
-    #image.show()
-
-    buf.seek(0)
-    response = requests.post("http://localhost:5000/", data=buf.getvalue(), headers={"Content-Type": "image/jpeg"})
-
-    #print(f"Sending data to webserver: {buf.getbuffer().nbytes} bytes")
-    #requests.post("http://localhost:5000/video_feed", data=buf, headers={"Content-Type": "image/jpeg"})
-
-    # os.makedirs(output_dir, exist_ok=True) # Create folder if it doesn't exist
-    # image_path = os.path.join(output_dir, frame_name) # Save the last frame in the folder
-    # pygame.image.save(window, image_path)
+    frame_name = f"frame_{frames_idx}.jpg"
+    output_dir = "simulation_frames"
+    os.makedirs(output_dir, exist_ok=True) # Create folder if it doesn't exist
+    image_path = os.path.join(output_dir, frame_name) # Save the last frame in the folder
+    pygame.image.save(window, image_path)
 
     #frames_idx += 1
-
-    window.fill((0, 0, 0)) # Reset window at the beginning of each simulation
 
     print(f"Distance between vehicles: {min_distance:.2f} meters")
 
