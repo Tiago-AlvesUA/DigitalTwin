@@ -31,7 +31,7 @@ def generate_mjpeg():
         except queue.Empty:
             continue
             
-
+# NOTE: This script is done to only serve one client at a time. Because the queue is used to store frames, if multiple clients try to access the stream, there will be lost frames.
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_mjpeg(),
