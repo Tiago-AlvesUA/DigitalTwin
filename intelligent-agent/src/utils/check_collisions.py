@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from config import DITTO_BASE_URL, DITTO_THING_ID, DITTO_USERNAME, DITTO_PASSWORD
 from utils.ditto import get_dynamics
 from workers.shared_memory import messages
+from messages.cam import delta_path_history_to_coordinates
 import utm
 import pymunk
 import pymunk.pygame_util
@@ -123,17 +124,23 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     print(f"Sender LON: {sender_lon}")
 
     # First collect necessary data to calculate the receiver path
-    ###current_dynamics = get_dynamics()
-    
+    current_dynamics = get_dynamics()
+    #print(f"Current dynamics: {current_dynamics}")
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
-    ###receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
-    ###receiver_lon = current_dynamics["properties"]["basicContainer"]["referencePosition"]["longitude"]
-    ###receiver_heading = current_dynamics["properties"]["highFrequencyContainer"]["heading"]["headingValue"]
-    ###receiver_speed = current_dynamics["properties"]["highFrequencyContainer"]["speed"]["speedValue"]
+    receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
+    receiver_lon = current_dynamics["properties"]["basicContainer"]["referencePosition"]["longitude"]
+    #receiver_heading = current_dynamics["properties"]["highFrequencyContainer"]["heading"]["headingValue"]
+    #receiver_speed = current_dynamics["properties"]["highFrequencyContainer"]["speed"]["speedValue"]
     receiver_id = 21 # DUMMY, should get from toml file
+    # Obtaining path history from ditto, feature Dynamics (Dynamics is updated by the intelligent agent - mqtt.py that processes broker messages)
+    if "lowFrequencyContainer" in current_dynamics["properties"]:
+        receiver_delta_path_history = current_dynamics["properties"]["lowFrequencyContainer"]["pathHistory"]
+        receiver_path_history = delta_path_history_to_coordinates(receiver_delta_path_history, (receiver_lat, receiver_lon))
+        draw_path_history("receiver", receiver_path_history)
 
     # Transform spherical coordinates into UTM ones (plane).TODO TODO: Must get reference position from the receiver to serve as normalizer
     sender_position = coordinates_to_utm((sender_lat/1e7, sender_lon/1e7))
+    
     receiver_position = coordinates_to_utm((40.6318981, -8.6903491))
    
     # Heading comes in compass degrees, so we need to convert it to a trigonometric angle

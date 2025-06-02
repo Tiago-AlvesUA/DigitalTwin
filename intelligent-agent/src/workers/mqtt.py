@@ -88,7 +88,7 @@ def on_message_cb(client, userdata, message):
             # Get the path history from CAM to draw it on the simulation
             path_history = cam_to_path_history(message.payload)
             #print(f"Path history of 22: {path_history}")
-            draw_path_history("receiver", path_history)
+            #draw_path_history("receiver", path_history)
 
         # TODO: Change for below (MCMs must be received by other stations, not station 22 that is the own vehicle)
         elif ("MCM" in message.topic):
@@ -155,7 +155,7 @@ def on_message_cb(client, userdata, message):
 
             # Get the path history from CAM to draw it on the simulation
             path_history = cam_to_path_history(message.payload)
-            draw_path_history("sender", path_history)
+            #draw_path_history("sender", path_history)
     
             
 

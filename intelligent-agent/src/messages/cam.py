@@ -111,6 +111,28 @@ def cam_to_path_history(payload):
     else:
         return []
 
+# When i get path history already from ditto, feature Dynamics
+def delta_path_history_to_coordinates(path_history, reference_position):
+    referenceLat = reference_position[0]
+    referenceLon = reference_position[1]
+
+    path_points = []
+    for point in path_history:
+        deltaLat = point["pathPosition"]["deltaLatitude"]
+        deltaLon = point["pathPosition"]["deltaLongitude"]
+
+        # TODO: Check if i need to divide by 1e7
+        lat = referenceLat + deltaLat
+        lon = referenceLon + deltaLon
+
+        path_points.append((lat/1e7, lon/1e7))
+
+        referenceLat = lat
+        referenceLon = lon
+
+    return path_points
+
+
 
 def cam_to_local_awareness(last_update_time, payload):
     #global local_awareness
