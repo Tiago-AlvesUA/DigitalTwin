@@ -72,7 +72,7 @@ def on_message_cb(client, userdata, message):
     if int(station_id) > 1000:
         pass
 
-
+    # TODO: Change to station id to 22/201
     if (station_id == "22"):
         if ("CAM" in message.topic):
             # Now switched management of current tile here, because MCMs do not have the tile path
@@ -82,15 +82,25 @@ def on_message_cb(client, userdata, message):
             id, dynamics = obtain_dynamics(message.payload)
             update_ditto_dynamics(dynamics)
 
-            data_to_send = {"id": id, "dynamics": dynamics}
-            #messages.put(json.dumps(data_to_send))
-
             # Get the path history from CAM to draw it on the simulation
-            path_history = cam_to_path_history(message.payload)
+            #path_history = cam_to_path_history(message.payload)
             #print(f"Path history of 22: {path_history}")
             #draw_path_history("receiver", path_history)
 
-        # TODO: Change for below (MCMs must be received by other stations, not station 22 that is the own vehicle)
+    # TODO: Change to station id to 22/201
+    elif (station_id != "22"):
+        # NOTE: Right now there are no CPMs being published by other vehicles, so this is not being used
+        if ("CPM" in message.topic):
+            #time_diff = time.time() - global_vars.last_local_perception_update
+            # Check if it has passed at least 1 second since the last ditto update
+            #if (time_diff < 1):
+            #    return
+
+            timestamp, local_perception = cpm_to_local_perception(message.payload)
+            local_perception_json = create_perception_json(timestamp, local_perception)
+            update_ditto_perception(local_perception_json)
+
+
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
@@ -105,10 +115,9 @@ def on_message_cb(client, userdata, message):
                 last_collision_timestamp = time.time()
                 bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
                 bcolors.log_warning_red(f"Vehicle {vehicle_id} must brake")
-                # TODO: for now thing id is hardcoded (because i need to see it on ditto and i only have one device on ditto for now), but should be changed
+                # TODO: here the braking action should be published to the station with smallest id
                 update_speed(avoidanceSpeedReduction, "org.acme:my-device-2")
                 brake_executed = True
-                # TODO: Publish to ditto the braking action
             else:
                 if (brake_executed):
                     if (time.time() - last_collision_timestamp > avoidanceBrakingTime):
@@ -122,42 +131,23 @@ def on_message_cb(client, userdata, message):
             local_trajectories_json = create_trajectories_json(sender_id, timestamp, sender_trajectory)
             update_ditto_trajectories(local_trajectories_json)
 
-            #data_to_send = {"id": id, "senderTrajectory": local_trajectories_json}
-            #messages.put(json.dumps(data_to_send))
-
-    elif (station_id != "22"):
-        if ("CPM" in message.topic):
-            #time_diff = time.time() - global_vars.last_local_perception_update
-            # Check if it has passed at least 1 second since the last ditto update
-            #if (time_diff < 1):
-            #    return
-
-            timestamp, local_perception = cpm_to_local_perception(message.payload)
-            local_perception_json = create_perception_json(timestamp, local_perception)
-            update_ditto_perception(local_perception_json)
-
-            # Send data over websocket
-            data_to_send = {"perception":local_perception_json}
-            #messages.put(json.dumps(data_to_send))
-
         elif ("CAM" in message.topic):
+            #print("CAM received")
             #global local_awareness
             #time_diff = time.time() - global_vars.last_local_awareness_update
             #if (time_diff < 10):    #TODO change later for less time to clear
             #    return
             dummy = 0
             id, timestamp, local_awareness = cam_to_local_awareness(dummy, message.payload)
+            # NOTE: Now awareness json mixes local awareness and path history
             local_awareness_json = create_awareness_json(timestamp, local_awareness)
             update_ditto_awareness(local_awareness_json)
 
-            data_to_send = {"id": id, "awareness":local_awareness_json}
-            #messages.put(json.dumps(data_to_send))
-
             # Get the path history from CAM to draw it on the simulation
-            path_history = cam_to_path_history(message.payload)
-            #draw_path_history("sender", path_history)
-    
             
+            #draw_path_history("sender", path_history)
+
+                
 
 def on_connect_cb(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:
@@ -165,7 +155,8 @@ def on_connect_cb(client, userdata, flags, reason_code, properties):
 
     print("Subscribing to topic: " + MQTT_INITIAL_TOPIC)
     mqtt_client.subscribe(MQTT_INITIAL_TOPIC)
-
+    # TODO: remove this subscribe when MCMs have tile path
+    mqtt_client.subscribe("its_center/inqueue/json/+/+") 
 
 def setup_initial_mqtt():
     mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)

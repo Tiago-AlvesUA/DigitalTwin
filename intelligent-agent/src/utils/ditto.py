@@ -53,6 +53,12 @@ def get_dynamics():
     dynamics = response.json()
     return dynamics
 
+def get_awareness():
+    url = f"{DITTO_BASE_URL}/{DITTO_THING_ID}/features/Awareness"
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    response = requests.get(url, headers=headers, auth=(DITTO_USERNAME, DITTO_PASSWORD))
+    awareness = response.json()
+    return awareness
 
 def update_speed(data, thing_id):
     url = f"{DITTO_BASE_URL}/{thing_id}/inbox/messages/UpdateSpeed"

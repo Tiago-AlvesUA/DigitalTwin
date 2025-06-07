@@ -3,7 +3,7 @@ import json
 import requests
 from dataclasses import dataclass
 from config import DITTO_BASE_URL, DITTO_THING_ID, DITTO_USERNAME, DITTO_PASSWORD
-from utils.ditto import get_dynamics
+from utils.ditto import get_dynamics, get_awareness
 from workers.shared_memory import messages
 from messages.cam import delta_path_history_to_coordinates
 import utm
@@ -53,9 +53,7 @@ def draw_path_history(vehicle_type, path_history):
     if vehicle_type == "sender":
         color = (0, 0, 255, 255) # Blue
     elif vehicle_type == "receiver":
-        #color = (255, 0, 0, 255) # Red
-        # TODO: Remove this blue color
-        color = (0, 0, 255, 255)
+        color = (255, 0, 0, 255) # Red
     else:
         return
     
@@ -77,7 +75,7 @@ def create_vehicle(space, position, mass, width, length, heading, speed, color):
     box_height = width
     body = pymunk.Body(mass, pymunk.moment_for_box(mass, (box_width, box_height))) # Moment for box calculates moment of intertia, which is necessary to determine resistance to rotational motion (and behave more realistically)
     x, y = position
-    print(f"Vehicle Position: {position}")
+    #print(f"Vehicle Position: {position}")
     body.position = (x,y)
     body.angle = heading
     # Using initial speed to calculate velocity
@@ -129,27 +127,37 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
     receiver_lon = current_dynamics["properties"]["basicContainer"]["referencePosition"]["longitude"]
-    #receiver_heading = current_dynamics["properties"]["highFrequencyContainer"]["heading"]["headingValue"]
-    #receiver_speed = current_dynamics["properties"]["highFrequencyContainer"]["speed"]["speedValue"]
+    receiver_heading = current_dynamics["properties"]["highFrequencyContainer"]["heading"]["headingValue"]
+    receiver_speed = current_dynamics["properties"]["highFrequencyContainer"]["speed"]["speedValue"]
     receiver_id = 21 # DUMMY, should get from toml file
+
+
+    #################### DRAW PATH HISTORY OF BOTH VEHICLES ###################
     # Obtaining path history from ditto, feature Dynamics (Dynamics is updated by the intelligent agent - mqtt.py that processes broker messages)
     if "lowFrequencyContainer" in current_dynamics["properties"]:
         receiver_delta_path_history = current_dynamics["properties"]["lowFrequencyContainer"]["pathHistory"]
         receiver_path_history = delta_path_history_to_coordinates(receiver_delta_path_history, (receiver_lat, receiver_lon))
         draw_path_history("receiver", receiver_path_history)
+    # Obtaining path history from ditto, feature Awareness (Awareness is updated by the intelligent agent - mqtt.py that processes broker messages)
+    current_awareness = get_awareness()
+    sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
+    # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
+    sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
+    draw_path_history("sender", sender_path_history)
+    ############################################################################
+
 
     # Transform spherical coordinates into UTM ones (plane).TODO TODO: Must get reference position from the receiver to serve as normalizer
     sender_position = coordinates_to_utm((sender_lat/1e7, sender_lon/1e7))
-    
-    receiver_position = coordinates_to_utm((40.6318981, -8.6903491))
+    receiver_position = coordinates_to_utm((receiver_lat/1e7, receiver_lon/1e7))
    
     # Heading comes in compass degrees, so we need to convert it to a trigonometric angle
     sender_heading = compass_to_trigonometric_angle(sender_heading/10)
-    receiver_heading = compass_to_trigonometric_angle(2000/10)
+    receiver_heading = compass_to_trigonometric_angle(receiver_heading/10)
 
 
     sender_body, sender_shape = create_vehicle(space, sender_position, 10, 1.8, 4.3, sender_heading, sender_speed*1e-2, color=(0, 0, 255, 255)) # blue
-    receiver_body, receiver_shape = create_vehicle(space, receiver_position, 10, 1.8, 4.3, receiver_heading, 2500*1e-2, color=(255, 0, 0, 255)) # red
+    receiver_body, receiver_shape = create_vehicle(space, receiver_position, 10, 1.8, 4.3, receiver_heading, receiver_speed*1e-2, color=(255, 0, 0, 255)) # red
 
     collision = space.add_collision_handler(1, 1)  # Type 1 = Cars
     collision.begin = collision_handler

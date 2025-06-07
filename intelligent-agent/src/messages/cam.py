@@ -1,7 +1,7 @@
 import json
 
 def obtain_dynamics(payload):
-
+    
     payload = json.loads(payload)
 
     device_id = payload["header"]["stationId"]
@@ -135,10 +135,16 @@ def delta_path_history_to_coordinates(path_history, reference_position):
 
 
 def cam_to_local_awareness(last_update_time, payload):
-    #global local_awareness
-
     payload = json.loads(payload)
-    
+
+    #global local_awareness
+    # TODO: Change if necessary
+    if "lowFrequencyContainer" in payload["cam"]["camParameters"]:
+        path_history = payload["cam"]["camParameters"]["lowFrequencyContainer"]["basicVehicleContainerLowFrequency"]["pathHistory"]
+    #path_history = cam_to_path_history(payload)
+    else:
+        path_history = []
+
     #if (last_update_time > 5):
     #    local_awareness = []
     local_awareness = []
@@ -157,7 +163,7 @@ def cam_to_local_awareness(last_update_time, payload):
     obj_lat = payload["cam"]["camParameters"]["basicContainer"]["referencePosition"]["latitude"]
     obj_lon = payload["cam"]["camParameters"]["basicContainer"]["referencePosition"]["longitude"]
 
-    local_awareness.append((obj_id, obj_type, obj_lat, obj_lon))
+    local_awareness.append((obj_id, obj_type, obj_lat, obj_lon, path_history))
 
     return obj_id, timestamp, local_awareness
 
@@ -170,11 +176,12 @@ def create_awareness_json(timestamp, local_awareness):
     }
 
     for obj in local_awareness:
-        id, type, lat, lon = obj
+        id, type, lat, lon, path_history = obj
         objects_json["properties"][id] = {
             "stationType": type,
             "latitude": lat,
-            "longitude": lon
+            "longitude": lon,
+            "pathHistory": path_history
         }
 
     return objects_json

@@ -1,5 +1,6 @@
 BROKER_HOST = "es-broker.av.it.pt"
 BROKER_PORT = 8090
+# TODO: I put id 201 but it should be 22/201, but better is dynamic
 MQTT_INITIAL_TOPIC = "its_center/inqueue/json/22/#"
 MQTT_USERNAME = "it2s"
 MQTT_PASSWORD = "it2sit2s"

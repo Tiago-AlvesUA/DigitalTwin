@@ -28,6 +28,8 @@ The commands are applied via the QMI control interface, namely /dev/cdc-wdm0. Th
 
 - The 99-it2s_5g-network file configures the network settings for it2s_5g, ensuring it uses DHCP for automatic IP configuration and DNS settings provided by DHCP. It also disables unnecessary local addressing;
 
+- NOTE: THE ORIGINAL METRIC FOR THE IT2S_5G ROUTE WAS 5, BUT I CHANGED TO 200 JUST FOR TESTS ON Instituto Telecom. . SO TO CHANGE IT BACK GO TO /etc/systemd/network/99...  
+
 - The 10-it2s-5g.rules file has the purpose to start the it2s-5g.service as the modem is plugged in and remove it when unplugged.
 
 - Finally the qmi-network.conf contains the APN and proxy usage.
