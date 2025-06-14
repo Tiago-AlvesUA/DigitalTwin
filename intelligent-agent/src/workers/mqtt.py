@@ -9,7 +9,7 @@ from utils.logger import bcolors
 from messages.cpm import cpm_to_local_perception, create_perception_json
 from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json, cam_to_path_history
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
-from utils.check_collisions import check_collisions, draw_path_history
+from utils.check_collisions import check_collisions, draw_path_history, draw_background
 from workers.shared_memory import messages
 from utils.ditto import update_speed
 
@@ -29,17 +29,23 @@ def manage_current_tile(message):
     global current_original_topic, current_subscribed_topics
 
     topic = message.topic.split("/")
+
     original_topic_tile = '/'.join(topic[5:])
     original_topic_path = f"its_center/inqueue/json/+/+/{original_topic_tile}"
 
     # If vehicle did not change tile, don't need to modify subscriptions
     if (original_topic_path == current_original_topic):
         return
+    
+    # TODO: Remove since this will be on check_collisions (pygame script), getting position from ditto
+    #quadkey = ''.join(topic[5:])
+    #draw_background(quadkey)
 
     bcolors.log_warning_blue(f"Switching original subscription to new quadtree topic: {original_topic_path}")
 
     it2s_tiles = It2s_Tiles()
     # Get the adjacent tiles (in all directions) NOTE: The original tile is also included, by calculation of Hold direction
+    print(f"Original topic tile: {original_topic_tile}")
     adjacent_tiles = set(it2s_tiles.it2s_get_all_adjacent_tiles(original_topic_tile))
 
     new_subscribed_topics = set()
