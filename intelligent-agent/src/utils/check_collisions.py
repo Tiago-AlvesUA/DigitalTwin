@@ -30,8 +30,8 @@ background_surface = pygame.Surface((WIDTH, HEIGHT))    # To hold the background
 frames_idx = 0
 tile_x, tile_y, zoom = 0, 0, 16  # Default values for tile coordinates and zoom level
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
-current_tiles = set()  # Set to hold currently processed tiles (for pygame background)
-
+current_grid = []  # Set to hold the current grid of tiles (for pygame background)
+tile_cache = {}  # Cache for downloaded tiles to avoid re-downloading # Key: (tile_x, tile_y, zoom), Value: PIL Image
 
 def compass_to_trigonometric_angle(degrees_heading):
     return math.radians(90 - degrees_heading)
@@ -75,17 +75,23 @@ def latlon_to_global_pixel(lat, lon, zoom=16):
 
 
 def download_tile(tile_x, tile_y, zoom):
+    global tile_cache
+
+    print(f"Downloading tile {tile_x},{tile_y} @ zoom {zoom}")
+
     url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
     headers = {"User-Agent": "MyPygameMapApp/1.0 (tiagojba9@gmail.com)"}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        return Image.open(BytesIO(response.content))
+        tile = Image.open(BytesIO(response.content))
+        tile_cache[(tile_x, tile_y, zoom)] = tile  # Cache the downloaded tile
+        return tile
     else:
         print(f"Failed to download tile {tile_x},{tile_y} @ zoom {zoom}")
         return Image.new("RGB", (256, 256), (0, 0, 0))  # fallback blank tile
 
 def draw_background(qk):
-    global ref_coord, tile_x, tile_y, zoom, current_qk, current_tiles
+    global ref_coord, tile_x, tile_y, zoom, current_qk, current_grid
 
     #qk = quadkey.from_str(qk)  
     tile_original = qk.to_tile()
@@ -95,7 +101,7 @@ def draw_background(qk):
     qk_str = '/'.join(qk_str) 
 
 
-    if qk_str == current_qk:
+    if qk_str == current_qk:    # If the quadkey did not change, do not redraw the background
         return
     else:
         current_qk = qk_str
@@ -104,39 +110,67 @@ def draw_background(qk):
     # Get all the adjacent tiles/quadkeys
     adjacent_quadkeys = it2s_tiles.it2s_get_all_adjacent_tiles(qk_str)
 
-    new_tiles = set()
+    # This new grid is composed of 9 tiles (1 center tile and 8 adjacent tiles)
+    new_grid = []
 
     for tile in adjacent_quadkeys:
-        new_tiles.add(tile)
+        new_grid.append(tile)
 
-    # Remove tiles that are no longer adjacent
-    tiles_to_remove = current_tiles - new_tiles
-    tiles_to_add = new_tiles - current_tiles
+    tiles_to_remove = [tile for tile in current_grid if tile not in new_grid]
 
-    # TODO: Reter os tiles que já tenham sido processados em pedidos anteriormente
+    tiles_to_add_position = {}  # Dictionary with key as the new tile to add and value as the position in the grid
+    for tile in new_grid:
+        if tile not in current_grid:
+            tiles_to_add_position[tile] = new_grid.index(tile)  # Position of the tile to add in the new grid
+    tiles_to_add = [tile for tile in new_grid if tile not in current_grid]
+
+    tiles_to_keep_new_position = {}   # Dictionary with key as the tile to retrieve from cache and value as the renewed position in the grid
+    for tile in current_grid:
+        if tile in new_grid:
+            tiles_to_keep_new_position[tile] = new_grid.index(tile)  # Position of the tile in the new array
 
 
-    # LOGIC TO GET ALL THE TILES TO DOWNLOAD
+    current_grid = new_grid  # Update the current tiles set
 
 
-    ##   ##TESTING##   ##
-    # Transform all quadkeys to tile coordinates
+    for tile in tiles_to_remove:
+        simple_tile = tile.replace('/', '')  # Remove slashes for quadkey
+        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
+        x, y, z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1]  # tile x, tile y, zoom level
+        if (x,y,z) in tile_cache:
+            del tile_cache[(x, y, z)] # Remove tile from cache
+
+
     # NOTE: All information regarding the tiles should be stored in arrays, in order to have ordered access to them
     stitched = Image.new("RGB", (768, 768))  # Create a new image to stitch the tiles
-    positions = [
+    positions_pixels = [
         (512, 256),   (0, 256),   (256, 512),
-        (256,0), (512,0), (512, 512), # feita
+        (256,0), (512,0), (512, 512), 
         (0,512), (0,0), (256, 256)
     ]
 
-
-    adjacent_quadkeys = [qk.replace('/', '') for qk in adjacent_quadkeys]
-    adjacent_tiles = [quadkey.from_str(qk).to_tile() for qk in adjacent_quadkeys]
-
-    for tile in adjacent_tiles:
-        x, y, z = tile[0][0], tile[0][1], tile[1] # tile x, tile y, zoom level
+    time1 = time.time()  # Start timer for performance measurement
+    for tile in tiles_to_add:
+        simple_tile = tile.replace('/', '')  # Remove slashes for quadkey
+        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
+        x,y,z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1] # tile x, tile y, zoom level
         tile_img = download_tile(x,y,z)
-        stitched.paste(tile_img, positions[adjacent_tiles.index(tile)])
+        grid_index = positions_pixels[tiles_to_add_position[tile]]  # Get the position of the tile in the grid
+        stitched.paste(tile_img, grid_index)  # Paste the tile image at the correct position
+    time1 = time.time() - time1  # Calculate time taken to download and paste new tiles
+    print(f"Time to download and paste new tiles: {time1:.2f} seconds")
+
+    #time2 = time.time()  # Start timer for pasting existing tiles
+    for tile in tiles_to_keep_new_position:
+        simple_tile = tile.replace('/', '')
+        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
+        x,y,z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1] # tile x, tile y, zoom level
+
+        tile_img = tile_cache.get((x, y, z))  # Get the tile from the cache
+        grid_index = positions_pixels[tiles_to_keep_new_position[tile]]  # Get the position of the tile in the grid
+        stitched.paste(tile_img, grid_index)  # Paste the tile image at the correct position
+    #time_to_paste_existing_tiles = time.time() - time2  # Calculate time taken to paste existing tiles
+    #print(f"Time to paste existing tiles: {time_to_paste_existing_tiles:.2f} seconds")
 
     mode = stitched.mode
     size = stitched.size
@@ -155,47 +189,6 @@ def draw_background(qk):
     pygame_image = pygame.transform.scale(pygame_image, (WIDTH, HEIGHT))
     window.blit(pygame_image, (0, 0))
     background_surface.blit(pygame_image, (0, 0))  # Store the background image for later use
-
-
-    # qk = quadkey.from_str(qk)  
-    # tile_original = qk.to_tile()
-    # #print(f"Drawing background for quadkey: {qk} at tile {tile}")
-    # tile_x, tile_y, zoom = tile_original[0][0], tile_original[0][1], tile_original[1]
-    
-    # # Get the 4 child tiles at the next zoom level
-    # next_zoom = zoom + 1
-    # child_quadkeys_str = [qk + quadrant for quadrant in "0123"]
-    # child_quadkeys = [quadkey.from_str(qk).to_tile() for qk in child_quadkeys_str]
-
-    # # Download and stitch the 4 child tiles together
-    # stitched = Image.new("RGB", (768, 768))  # Create a new image to stitch the tiles
-    # positions = [(0, 0), (256, 0), (0, 256), (256, 256)]  # Positions for the 4 tiles
-
-    # print("Downloading tiles for quadkeys:")
-    # time_now = time.time()
-    # for quad_tile in child_quadkeys:
-    #     tile_img = download_tile(quad_tile[0][0], quad_tile[0][1], next_zoom)
-    #     stitched.paste(tile_img, positions[child_quadkeys.index(quad_tile)])
-    # time_elapsed = time.time() - time_now
-    # print(f"Time taken to download and stitch tiles: {time_elapsed:.2f} seconds")
-
-    # mode = stitched.mode
-    # size = stitched.size
-    # data = stitched.tobytes()
-    
-    # # Create Pygame surface
-    # if mode == "RGB":
-    #     pygame_image = pygame.image.fromstring(data, size, "RGB")
-    # elif mode == "RGBA":
-    #     pygame_image = pygame.image.fromstring(data, size, "RGBA")
-    # else:
-    #     # Convert to RGB if unexpected mode
-    #     stitched = stitched.convert("RGB")
-    #     pygame_image = pygame.image.fromstring(stitched.tobytes(), stitched.size, "RGB")
-    
-    # pygame_image = pygame.transform.scale(pygame_image, (WIDTH, HEIGHT))
-    # window.blit(pygame_image, (0, 0))
-    # background_surface.blit(pygame_image, (0, 0))  # Store the background image for later use
 
 
 def draw_path_history(vehicle_type, path_history, ref_coord):
@@ -264,6 +257,8 @@ def collision_handler(arbiter, space, data):
 def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
     global collision_time, time_elapsed, window, frames_idx
     #print(f"Sender ID: {sender_id}")
+    
+    time_overall = time.time()  # Start timer for performance measurement
 
     time_elapsed = 0.0
     collision_time = None
@@ -275,13 +270,16 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     space.gravity = (0,0)
 
     collision_detected = False
-    print(f"Sender LAT: {sender_lat}")
-    print(f"Sender LON: {sender_lon}")
+    #print(f"Sender LAT: {sender_lat}")
+    #print(f"Sender LON: {sender_lon}")
 
+    time_test = time.time()  # Start timer for performance measurement
     # First collect necessary data to calculate the receiver path
     current_dynamics = get_dynamics()
     #print(f"Current dynamics: {current_dynamics}")
-    
+    time_test = time.time() - time_test  # Calculate time taken for the entire process
+    print(f"Time to get dynamics: {time_test:.2f} seconds")
+
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
     receiver_lon = current_dynamics["properties"]["basicContainer"]["referencePosition"]["longitude"]
@@ -289,6 +287,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     receiver_speed = current_dynamics["properties"]["highFrequencyContainer"]["speed"]["speedValue"]
     receiver_id = 21 # DUMMY, should get from toml file
 
+    
     ##################### DRAW BACKGROUND MAP ###################
     receiver_quadkey = quadkey.from_geo((receiver_lat/1e7,receiver_lon/1e7),zoom)
     draw_background(receiver_quadkey)
@@ -305,7 +304,10 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         receiver_path_history = delta_path_history_to_coordinates(receiver_delta_path_history, (receiver_lat, receiver_lon))
         draw_path_history("receiver", receiver_path_history, (receiver_lat/1e7, receiver_lon/1e7))
     # Obtaining path history from ditto, feature Awareness (Awareness is updated by the intelligent agent - mqtt.py that processes broker messages)
+    time_test = time.time()  # Start timer for performance measurement
     current_awareness = get_awareness()
+    time_test = time.time() - time_test  # Calculate time taken for the entire process
+    print(f"Time to get awareness: {time_test:.2f} seconds")
     sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
     # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
     sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
@@ -358,6 +360,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     image.save(buf, format='JPEG')
 
     buf.seek(0)
+    
     response = requests.post("http://localhost:5000/", data=buf.getvalue(), headers={"Content-Type": "image/jpeg"})
 
     #window.fill((0, 0, 0)) # Reset window after sending the frame (Reset between each simulation)
@@ -366,5 +369,8 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     print(f"Distance between vehicles: {min_distance:.2f} meters")
 
     lowest_id = min(sender_id, receiver_id)
+
+    time_overall = time.time() - time_overall  # Calculate time taken for the entire process
+    print(f"Time taken for collision check: {time_overall:.2f} seconds")
 
     return collision_detected, lowest_id

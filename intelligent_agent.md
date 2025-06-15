@@ -1,0 +1,12 @@
+### TILES to SUBSCRIBE only close messages
+
+
+### GATHERING INFO FROM MQTT BROKER and DITTO
+
+
+### DITTO FEATURES CREATED
+
+
+### CHECK COLLISIONS
+
+    - 
