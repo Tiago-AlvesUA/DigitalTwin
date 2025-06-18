@@ -28,7 +28,7 @@ WIDTH, HEIGHT = 768, 768 # For testing purposes, use a smaller window
 window = pygame.Surface((WIDTH, HEIGHT))
 background_surface = pygame.Surface((WIDTH, HEIGHT))    # To hold the background image
 frames_idx = 0
-tile_x, tile_y, zoom = 0, 0, 16  # Default values for tile coordinates and zoom level
+tile_x, tile_y, zoom = 0, 0, 17  # Default values for tile coordinates and zoom level
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
 current_grid = []  # Set to hold the current grid of tiles (for pygame background)
 tile_cache = {}  # Cache for downloaded tiles to avoid re-downloading # Key: (tile_x, tile_y, zoom), Value: PIL Image
@@ -59,7 +59,7 @@ def coordinates_to_utm(coord):
 
 # TODO: Change zoom to 16
 # https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-def latlon_to_global_pixel(lat, lon, zoom=16):
+def latlon_to_global_pixel(lat, lon, zoom=17):
     """
     Convert latitude and longitude to pixel coordinates for a given tile at a certain zoom level.
     First, it converts latitude and longitude to Mercator projection coordinates,
