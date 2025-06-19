@@ -1,0 +1,5 @@
+dbus-python==1.4.0
+paho-mqtt==2.1.0
+pycairo==1.28.0
+PyGObject==3.50.0
+scapy==2.6.1

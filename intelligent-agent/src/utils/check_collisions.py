@@ -329,7 +329,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     sender_body, sender_shape = create_vehicle(space, sender_position, 10, 1.8, 4.3, sender_heading, sender_speed*1e-2, color=(0, 0, 255, 255)) # blue
     receiver_body, receiver_shape = create_vehicle(space, receiver_position, 10, 1.8, 4.3, receiver_heading, receiver_speed*1e-2, color=(255, 0, 0, 255)) # red
 
-    collision = space.add_collision_handler(1, 1)  # Type 1 = Cars
+    collision = space.add_collision_handler(1,1)  # Type 1 = Cars
     collision.begin = collision_handler
 
     draw_options = pymunk.pygame_util.DrawOptions(window)

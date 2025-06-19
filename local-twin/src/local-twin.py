@@ -1,5 +1,5 @@
 import paho.mqtt.client as mqtt
-import asn1tools
+# import asn1tools
 import json
 import signal
 import sys
@@ -22,8 +22,8 @@ mqtt_client = None
 device_id = None
 network_delay = 0
 network_throughput = [0, 0]
-asn1_files = ['ditto_message_v3.asn1', 'cd_dictionary_ts_102_894_2_v2.2.1.asn1', 'modem_status_2.0.asn1']
-dtm = asn1tools.compile_files(asn1_files, 'jer')
+# asn1_files = ['ditto_message_v3.asn1', 'cd_dictionary_ts_102_894_2_v2.2.1.asn1', 'modem_status_2.0.asn1']
+# dtm = asn1tools.compile_files(asn1_files, 'jer')
 
 # Signal handler for clean exit
 def signal_handler(sig, frame):
@@ -35,6 +35,7 @@ def signal_handler(sig, frame):
 # Function to set up the MQTT client
 def setup_mqtt():
     global mqtt_client, device_id
+    # TODO: Create new toml file for the local-twin
     itss_cfg = toml.load('/etc/it2s/itss.toml')
     device_id = itss_cfg['security']['identity']['station-id']
 
