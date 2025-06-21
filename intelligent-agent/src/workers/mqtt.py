@@ -10,12 +10,12 @@ from messages.cpm import cpm_to_local_perception, create_perception_json
 from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json, cam_to_path_history
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
 from utils.check_collisions import check_collisions, draw_path_history, draw_background
-from workers.shared_memory import messages
+from workers.shared_memory import messages #, last_local_awareness_update
 from utils.ditto import update_speed
 
 current_original_topic = "placeholder"
 current_subscribed_topics = set()
-#local_awareness = []        # TODO
+# local_awareness = []        # TODO
 #local_trajectories = []         # TODO
 
 last_collision_timestamp = None
@@ -95,6 +95,7 @@ def on_message_cb(client, userdata, message):
 
     # TODO: Change to station id to 22/201
     elif (station_id != "22"):
+        #print(f"Received message from station {station_id} on topic {message.topic}")
         # NOTE: Right now there are no CPMs being published by other vehicles, so this is not being used
         if ("CPM" in message.topic):
             #time_diff = time.time() - global_vars.last_local_perception_update
@@ -117,6 +118,7 @@ def on_message_cb(client, userdata, message):
             # Check if there is collision and get the vehicle id that needs to brake or regain speed
             exists_collision, vehicle_id = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
             brake_executed = False
+            # TODO
             if (exists_collision):
                 last_collision_timestamp = time.time()
                 bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
@@ -139,15 +141,19 @@ def on_message_cb(client, userdata, message):
 
         elif ("CAM" in message.topic):
             #print("CAM received")
-            #global local_awareness
-            #time_diff = time.time() - global_vars.last_local_awareness_update
-            #if (time_diff < 10):    #TODO change later for less time to clear
-            #    return
+            global local_awareness
+            # time_diff = time.time() - last_local_awareness_update
+            # if (time_diff < 10):    #TODO change later for less time to clear
+            #     return
+            
             dummy = 0
             id, timestamp, local_awareness = cam_to_local_awareness(dummy, message.payload)
             # NOTE: Now awareness json mixes local awareness and path history
             local_awareness_json = create_awareness_json(timestamp, local_awareness)
+            timeNOW = time.time()
             update_ditto_awareness(local_awareness_json)
+            timeAFTER = time.time()
+            print(f"Time taken to send CAM info to ditto: {timeAFTER - timeNOW} seconds")
 
             # Get the path history from CAM to draw it on the simulation
             

@@ -1,5 +1,7 @@
 import json
 
+local_awareness = []
+
 def obtain_dynamics(payload):
     
     payload = json.loads(payload)
@@ -136,8 +138,8 @@ def delta_path_history_to_coordinates(path_history, reference_position):
 
 def cam_to_local_awareness(last_update_time, payload):
     payload = json.loads(payload)
+    global local_awareness
 
-    #global local_awareness
     # TODO: Change if necessary
     if "lowFrequencyContainer" in payload["cam"]["camParameters"]:
         path_history = payload["cam"]["camParameters"]["lowFrequencyContainer"]["basicVehicleContainerLowFrequency"]["pathHistory"]
@@ -145,9 +147,10 @@ def cam_to_local_awareness(last_update_time, payload):
     else:
         path_history = []
 
-    #if (last_update_time > 5):
-    #    local_awareness = []
-    local_awareness = []
+    # TODO: Correct this
+    if (last_update_time > 5):
+       local_awareness = []
+    #local_awareness = []
 
     timestamp = payload["cam"]["generationDeltaTime"]
 

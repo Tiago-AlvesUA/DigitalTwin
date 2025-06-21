@@ -1,3 +1,4 @@
+#TODO: APAGAR
 import multiprocessing
 import queue
 # Shared queue for storing MQTT messages (multiprocessing-safe)
@@ -5,6 +6,7 @@ message_queue = multiprocessing.Queue()
 
 messages = queue.Queue()
 
+# last_local_awareness_update = None
 
 # class SharedQueue:
 #     @staticmethod

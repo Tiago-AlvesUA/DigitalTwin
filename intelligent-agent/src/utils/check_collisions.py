@@ -1,17 +1,16 @@
 import math
-import json
+# import json
 import requests
-from dataclasses import dataclass
-from config import DITTO_BASE_URL, DITTO_THING_ID, DITTO_USERNAME, DITTO_PASSWORD
+# from dataclasses import dataclass
 from utils.ditto import get_dynamics, get_awareness
 from workers.shared_memory import messages
 from messages.cam import delta_path_history_to_coordinates
+from utils.tile_manager import stitch_tiles, remove_tiles_from_cache
 from utils.tiles import It2s_Tiles
 import utm
 import pymunk
 import pymunk.pygame_util
 import pygame
-import os
 from PIL import Image
 import numpy as np
 import io
@@ -20,18 +19,19 @@ from io import BytesIO
 import mercantile
 import time
 
+pygame.init()
+
 time_elapsed = 0.0
 collision_time = None
-pygame.init()
-# WIDTH, HEIGHT = 500, 300
 WIDTH, HEIGHT = 768, 768 # For testing purposes, use a smaller window
 window = pygame.Surface((WIDTH, HEIGHT))
 background_surface = pygame.Surface((WIDTH, HEIGHT))    # To hold the background image
-frames_idx = 0
 tile_x, tile_y, zoom = 0, 0, 17  # Default values for tile coordinates and zoom level
+#necessary
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
+#necessary
 current_grid = []  # Set to hold the current grid of tiles (for pygame background)
-tile_cache = {}  # Cache for downloaded tiles to avoid re-downloading # Key: (tile_x, tile_y, zoom), Value: PIL Image
+
 
 def compass_to_trigonometric_angle(degrees_heading):
     return math.radians(90 - degrees_heading)
@@ -45,21 +45,8 @@ def apply_force(vehicle, acceleration):
 
     vehicle.apply_force_at_local_point((force_x,force_y), (0,0))    # Always applied at position (0,0) since it is the Center of Mass of the object (it already takes in consideration the coordinates where the object is)
 
-# Not in use
-def coordinates_to_utm(coord):
-    global ref_coord
-
-    coordUTM = utm.from_latlon(*coord)
-    refUTM = utm.from_latlon(*ref_coord)
-
-    x = coordUTM[0] - refUTM[0]      
-    y = coordUTM[1] - refUTM[1]      
-
-    return (x,y)
-
-# TODO: Change zoom to 16
 # https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-def latlon_to_global_pixel(lat, lon, zoom=17):
+def latlon_to_img_pixel(lat, lon, zoom=17):
     """
     Convert latitude and longitude to pixel coordinates for a given tile at a certain zoom level.
     First, it converts latitude and longitude to Mercator projection coordinates,
@@ -73,22 +60,6 @@ def latlon_to_global_pixel(lat, lon, zoom=17):
     return (x, y)
 
 
-
-def download_tile(tile_x, tile_y, zoom):
-    global tile_cache
-
-    print(f"Downloading tile {tile_x},{tile_y} @ zoom {zoom}")
-
-    url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-    headers = {"User-Agent": "MyPygameMapApp/1.0 (tiagojba9@gmail.com)"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        tile = Image.open(BytesIO(response.content))
-        tile_cache[(tile_x, tile_y, zoom)] = tile  # Cache the downloaded tile
-        return tile
-    else:
-        print(f"Failed to download tile {tile_x},{tile_y} @ zoom {zoom}")
-        return Image.new("RGB", (256, 256), (0, 0, 0))  # fallback blank tile
 
 def draw_background(qk):
     global ref_coord, tile_x, tile_y, zoom, current_qk, current_grid
@@ -117,60 +88,15 @@ def draw_background(qk):
         new_grid.append(tile)
 
     tiles_to_remove = [tile for tile in current_grid if tile not in new_grid]
-
-    tiles_to_add_position = {}  # Dictionary with key as the new tile to add and value as the position in the grid
-    for tile in new_grid:
-        if tile not in current_grid:
-            tiles_to_add_position[tile] = new_grid.index(tile)  # Position of the tile to add in the new grid
-    tiles_to_add = [tile for tile in new_grid if tile not in current_grid]
-
-    tiles_to_keep_new_position = {}   # Dictionary with key as the tile to retrieve from cache and value as the renewed position in the grid
-    for tile in current_grid:
-        if tile in new_grid:
-            tiles_to_keep_new_position[tile] = new_grid.index(tile)  # Position of the tile in the new array
-
+    if tiles_to_remove:
+        remove_tiles_from_cache(tiles_to_remove)
 
     current_grid = new_grid  # Update the current tiles set
 
-
-    for tile in tiles_to_remove:
-        simple_tile = tile.replace('/', '')  # Remove slashes for quadkey
-        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
-        x, y, z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1]  # tile x, tile y, zoom level
-        if (x,y,z) in tile_cache:
-            del tile_cache[(x, y, z)] # Remove tile from cache
-
-
     # NOTE: All information regarding the tiles should be stored in arrays, in order to have ordered access to them
-    stitched = Image.new("RGB", (768, 768))  # Create a new image to stitch the tiles
-    positions_pixels = [
-        (512, 256),   (0, 256),   (256, 512),
-        (256,0), (512,0), (512, 512), 
-        (0,512), (0,0), (256, 256)
-    ]
-
-    time1 = time.time()  # Start timer for performance measurement
-    for tile in tiles_to_add:
-        simple_tile = tile.replace('/', '')  # Remove slashes for quadkey
-        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
-        x,y,z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1] # tile x, tile y, zoom level
-        tile_img = download_tile(x,y,z)
-        grid_index = positions_pixels[tiles_to_add_position[tile]]  # Get the position of the tile in the grid
-        stitched.paste(tile_img, grid_index)  # Paste the tile image at the correct position
-    time1 = time.time() - time1  # Calculate time taken to download and paste new tiles
-    print(f"Time to download and paste new tiles: {time1:.2f} seconds")
-
-    #time2 = time.time()  # Start timer for pasting existing tiles
-    for tile in tiles_to_keep_new_position:
-        simple_tile = tile.replace('/', '')
-        tile_coordinates = quadkey.from_str(simple_tile).to_tile()  # Convert to tile coordinates
-        x,y,z = tile_coordinates[0][0], tile_coordinates[0][1], tile_coordinates[1] # tile x, tile y, zoom level
-
-        tile_img = tile_cache.get((x, y, z))  # Get the tile from the cache
-        grid_index = positions_pixels[tiles_to_keep_new_position[tile]]  # Get the position of the tile in the grid
-        stitched.paste(tile_img, grid_index)  # Paste the tile image at the correct position
-    #time_to_paste_existing_tiles = time.time() - time2  # Calculate time taken to paste existing tiles
-    #print(f"Time to paste existing tiles: {time_to_paste_existing_tiles:.2f} seconds")
+    stitched_empty = Image.new("RGB", (768, 768))  # Create a new image to stitch the tiles
+    
+    stitched = stitch_tiles(stitched_empty, new_grid)  # Stitch the tiles together
 
     mode = stitched.mode
     size = stitched.size
@@ -206,7 +132,7 @@ def draw_path_history(vehicle_type, path_history, ref_coord):
     # Transform each coordinate in the path history to UTM
     for point in path_history:
         #print(f"Point: {point}")
-        point_position = latlon_to_global_pixel(point[0],point[1])#coordinates_to_utm(point)#,ref_coord)
+        point_position = latlon_to_img_pixel(point[0],point[1])#coordinates_to_utm(point)#,ref_coord)
         # Apply same transform as draw_options.transform (flip Y and translate to center)
         screen_x = int(point_position[0] - (tile_x-1) * 256)
         screen_y = int(point_position[1] - (tile_y-1) * 256)
@@ -255,7 +181,7 @@ def collision_handler(arbiter, space, data):
 
 
 def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
-    global collision_time, time_elapsed, window, frames_idx
+    global collision_time, time_elapsed, window
     #print(f"Sender ID: {sender_id}")
     
     time_overall = time.time()  # Start timer for performance measurement
@@ -278,7 +204,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     current_dynamics = get_dynamics()
     #print(f"Current dynamics: {current_dynamics}")
     time_test = time.time() - time_test  # Calculate time taken for the entire process
-    print(f"Time to get dynamics: {time_test:.2f} seconds")
+    print(f"Time to get dynamics from ditto: {time_test:.2f} seconds")
 
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
@@ -307,19 +233,22 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     time_test = time.time()  # Start timer for performance measurement
     current_awareness = get_awareness()
     time_test = time.time() - time_test  # Calculate time taken for the entire process
-    print(f"Time to get awareness: {time_test:.2f} seconds")
-    sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
-    # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
-    sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
-    draw_path_history("sender", sender_path_history, (receiver_lat/1e7, receiver_lon/1e7))
+    print(f"Time to get awareness from ditto: {time_test:.2f} seconds")
+
+    # check if the sender_id exists in the awareness properties
+    if str(sender_id) in current_awareness["properties"]:
+        sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
+        # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
+        sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
+        draw_path_history("sender", sender_path_history, (receiver_lat/1e7, receiver_lon/1e7))
     ############################################################################
 
 
 
 
     # Transform spherical coordinates into UTM ones (plane).TODO TODO: Must get reference position from the receiver to serve as normalizer
-    sender_position = latlon_to_global_pixel(sender_lat/1e7,sender_lon/1e7)#coordinates_to_utm((sender_lat/1e7, sender_lon/1e7))#, (receiver_lat/1e7, receiver_lon/1e7))
-    receiver_position = latlon_to_global_pixel(receiver_lat/1e7,receiver_lon/1e7)#coordinates_to_utm((receiver_lat/1e7, receiver_lon/1e7))#, (receiver_lat/1e7, receiver_lon/1e7))
+    sender_position = latlon_to_img_pixel(sender_lat/1e7,sender_lon/1e7)#coordinates_to_utm((sender_lat/1e7, sender_lon/1e7))#, (receiver_lat/1e7, receiver_lon/1e7))
+    receiver_position = latlon_to_img_pixel(receiver_lat/1e7,receiver_lon/1e7)#coordinates_to_utm((receiver_lat/1e7, receiver_lon/1e7))#, (receiver_lat/1e7, receiver_lon/1e7))
    
     # Heading comes in compass degrees, so we need to convert it to a trigonometric angle
     sender_heading = compass_to_trigonometric_angle(sender_heading/10)
