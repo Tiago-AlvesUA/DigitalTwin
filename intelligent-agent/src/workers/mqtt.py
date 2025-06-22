@@ -1,16 +1,15 @@
 from utils.tiles import It2s_Tiles
-import asyncio
-import json
 import time
 import paho.mqtt.client as mqtt
 from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_INITIAL_TOPIC
-from utils.ditto import update_ditto_trajectories, update_ditto_perception, update_ditto_awareness, update_ditto_dynamics
-from utils.logger import bcolors 
+from utils.ditto import update_ditto_trajectories#, update_ditto_perception, update_ditto_awareness#, update_ditto_dynamics
+from utils.logger import bcolors
+from workers.ditto_sender import update_ditto_dynamics, update_ditto_awareness, update_ditto_perception 
 from messages.cpm import cpm_to_local_perception, create_perception_json
 from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json, cam_to_path_history
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
-from utils.check_collisions import check_collisions, draw_path_history, draw_background
-from workers.shared_memory import messages #, last_local_awareness_update
+from utils.check_collisions import check_collisions
+
 from utils.ditto import update_speed
 
 current_original_topic = "placeholder"
@@ -21,8 +20,6 @@ current_subscribed_topics = set()
 last_collision_timestamp = None
 avoidanceBrakingTime = 0.9 # seconds
 avoidanceSpeedReduction = -5 # m/s
-own_trajectory = [] # TODO: Not used anymore
-
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
 
 def manage_current_tile(message):
@@ -36,10 +33,6 @@ def manage_current_tile(message):
     # If vehicle did not change tile, don't need to modify subscriptions
     if (original_topic_path == current_original_topic):
         return
-    
-    # TODO: Remove since this will be on check_collisions (pygame script), getting position from ditto
-    #quadkey = ''.join(topic[5:])
-    #draw_background(quadkey)
 
     bcolors.log_warning_blue(f"Switching original subscription to new quadtree topic: {original_topic_path}")
 
@@ -87,11 +80,6 @@ def on_message_cb(client, userdata, message):
             # timestamp is already included in the json in obtain_dynamics()
             id, dynamics = obtain_dynamics(message.payload)
             update_ditto_dynamics(dynamics)
-
-            # Get the path history from CAM to draw it on the simulation
-            #path_history = cam_to_path_history(message.payload)
-            #print(f"Path history of 22: {path_history}")
-            #draw_path_history("receiver", path_history)
 
     # TODO: Change to station id to 22/201
     elif (station_id != "22"):
@@ -148,18 +136,12 @@ def on_message_cb(client, userdata, message):
             
             dummy = 0
             id, timestamp, local_awareness = cam_to_local_awareness(dummy, message.payload)
-            # NOTE: Now awareness json mixes local awareness and path history
+            # NOTE: Now awareness json mixes local awareness and path history TODO: Organize this feature better?
             local_awareness_json = create_awareness_json(timestamp, local_awareness)
-            timeNOW = time.time()
+            #timeNOW = time.time()
             update_ditto_awareness(local_awareness_json)
-            timeAFTER = time.time()
-            print(f"Time taken to send CAM info to ditto: {timeAFTER - timeNOW} seconds")
-
-            # Get the path history from CAM to draw it on the simulation
-            
-            #draw_path_history("sender", path_history)
-
-                
+            #timeAFTER = time.time()
+            #print(f"Time taken to send CAM info to ditto: {timeAFTER - timeNOW} seconds")
 
 def on_connect_cb(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:

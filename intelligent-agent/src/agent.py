@@ -1,39 +1,32 @@
 # Description: This daemon will be running in cloud/edge to bridge the communication between the remote MQTT broker and the Ditto platform;
 import threading
-import asyncio
+import signal
+import sys
 from workers.mqtt import setup_initial_mqtt
-from workers.webserver import start_websocket_server, send_to_visualizer
-from workers.shared_memory import messages
+from workers.ditto_listener import start_ditto_ws_listener
+from workers.ditto_sender import start_sender_ws_listener
+
+stop_event = threading.Event()
 
 def subscribe_to_get_vehicle_area():
     """ Subscribes to the own vehicle messages to get the current location. """
     setup_initial_mqtt()
 
-
 # TODO: Se possível utilizar para ambos mqtt e websocket threads ou asyncio
 def start_agent_thread():
-    # Thread number 2 to start the MQTT client
-    initial_thread = threading.Thread(target=subscribe_to_get_vehicle_area, daemon=True)
-    initial_thread.start()
+    mqtt_thread = threading.Thread(target=subscribe_to_get_vehicle_area, daemon=True)
+    mqtt_thread.start()
 
-    # Async tasks - start WS server and message processor concurrently (running in the main thread)
-    async def websocket_task():
-        """Starts the WebSocket server"""
-        await start_websocket_server()
+    ditto_ws_thread = threading.Thread(target=start_ditto_ws_listener, daemon=True)
+    ditto_ws_thread.start()
 
-    async def message_processor():
-        while True:
-            msg = await asyncio.to_thread(messages.get)  # Get item from queue
-            await send_to_visualizer(msg)
+    sender_ws_thread = threading.Thread(target=start_sender_ws_listener, daemon=True)
+    sender_ws_thread.start()
 
-    async def main():
-        task1 = asyncio.create_task(websocket_task())
-        task2 = asyncio.create_task(message_processor())
-        await asyncio.gather(task1, task2)
-
-    # Start the event loop properly
-    asyncio.run(main())
-
+    mqtt_thread.join()
+    ditto_ws_thread.join()
+    sender_ws_thread.join()
+    
 
 if __name__ == "__main__":
     # Main thread

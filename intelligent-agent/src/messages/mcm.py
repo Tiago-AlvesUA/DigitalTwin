@@ -6,11 +6,8 @@
 
 import math
 import json
-import requests
 from dataclasses import dataclass
 from config import DITTO_BASE_URL, DITTO_THING_ID, DITTO_USERNAME, DITTO_PASSWORD
-from utils.ditto import get_dynamics
-from workers.shared_memory import messages
 
 @dataclass
 class Coordinates:
@@ -238,19 +235,19 @@ def check_point_collisions(sender_id, sender_speed, sender_lat, sender_lon, send
                     senderInterpolatedPoints[i][j].collision = "yes"
 
 
-    data_to_send = {"id": sender_id, "senderTrajectory": [vars(coord) for coord in sender_trajectory]}
-    messages.put(json.dumps(data_to_send))
+    # data_to_send = {"id": sender_id, "senderTrajectory": [vars(coord) for coord in sender_trajectory]}
+    # messages.put(json.dumps(data_to_send))
 
-    data_to_send = {"id": 23, "receiverTrajectory": [vars(coord) for coord in receiver_trajectory]}
-    #print(data_to_send)
-    messages.put(json.dumps(data_to_send))
+    # data_to_send = {"id": 23, "receiverTrajectory": [vars(coord) for coord in receiver_trajectory]}
+    # #print(data_to_send)
+    # messages.put(json.dumps(data_to_send))
 
     # DUMMY IDs, so it does not overlap in frontend!?
-    data_to_send = {"id": 25, "senderInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in senderInterpolatedPoints for interpolatedPoint in intermediatePoint]}
-    messages.put(json.dumps(data_to_send))
-    data_to_send = {"id": 30, "receiverInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in receiverInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    # data_to_send = {"id": 25, "senderInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in senderInterpolatedPoints for interpolatedPoint in intermediatePoint]}
+    # messages.put(json.dumps(data_to_send))
+    # data_to_send = {"id": 30, "receiverInterpolatedPoints": [vars(interpolatedPoint) for intermediatePoint in receiverInterpolatedPoints for interpolatedPoint in intermediatePoint]}
     #print(data_to_send)
-    messages.put(json.dumps(data_to_send))
+    # messages.put(json.dumps(data_to_send))
 
     return collision_detected
 

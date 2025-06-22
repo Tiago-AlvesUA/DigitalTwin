@@ -1,13 +1,9 @@
 import math
-# import json
 import requests
-# from dataclasses import dataclass
-from utils.ditto import get_dynamics, get_awareness
-from workers.shared_memory import messages
 from messages.cam import delta_path_history_to_coordinates
 from utils.tile_manager import stitch_tiles, remove_tiles_from_cache
 from utils.tiles import It2s_Tiles
-import utm
+from workers.ditto_listener import get_awareness, get_dynamics
 import pymunk
 import pymunk.pygame_util
 import pygame
@@ -15,21 +11,18 @@ from PIL import Image
 import numpy as np
 import io
 from pyquadkey2 import quadkey
-from io import BytesIO
-import mercantile
 import time
 
 pygame.init()
 
+current_awareness = None
 time_elapsed = 0.0
 collision_time = None
 WIDTH, HEIGHT = 768, 768 # For testing purposes, use a smaller window
 window = pygame.Surface((WIDTH, HEIGHT))
 background_surface = pygame.Surface((WIDTH, HEIGHT))    # To hold the background image
 tile_x, tile_y, zoom = 0, 0, 17  # Default values for tile coordinates and zoom level
-#necessary
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
-#necessary
 current_grid = []  # Set to hold the current grid of tiles (for pygame background)
 
 
@@ -202,9 +195,16 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     time_test = time.time()  # Start timer for performance measurement
     # First collect necessary data to calculate the receiver path
     current_dynamics = get_dynamics()
+
+    # TODO: Leave like this or not?? If no dynamics, just skip the check collision
+    if current_dynamics == None:
+        print("No dynamics yet from own vehicle to check for collisions.")
+        return collision_detected, 21
+    
+
     #print(f"Current dynamics: {current_dynamics}")
     time_test = time.time() - time_test  # Calculate time taken for the entire process
-    print(f"Time to get dynamics from ditto: {time_test:.2f} seconds")
+    print(f"Time to get dynamics from ditto: {time_test} seconds")
 
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
@@ -216,7 +216,10 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     
     ##################### DRAW BACKGROUND MAP ###################
     receiver_quadkey = quadkey.from_geo((receiver_lat/1e7,receiver_lon/1e7),zoom)
+    timeToDraw = time.time()
     draw_background(receiver_quadkey)
+    timeToDraw = time.time() - timeToDraw
+    print(f"Time to draw background: {timeToDraw}")
 
     #############################################################
 
@@ -233,10 +236,13 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     time_test = time.time()  # Start timer for performance measurement
     current_awareness = get_awareness()
     time_test = time.time() - time_test  # Calculate time taken for the entire process
-    print(f"Time to get awareness from ditto: {time_test:.2f} seconds")
+    print(f"Time to get awareness from ditto: {time_test} seconds")
+
+    # print(f"CURRENT AWARENESS: {current_awareness}")
 
     # check if the sender_id exists in the awareness properties
-    if str(sender_id) in current_awareness["properties"]:
+    # NOTE: By the time the MCM was received there might not be current awareness yet
+    if (current_awareness != None) and (str(sender_id) in current_awareness["properties"]):
         sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
         # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
         sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
@@ -292,7 +298,6 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     
     response = requests.post("http://localhost:5000/", data=buf.getvalue(), headers={"Content-Type": "image/jpeg"})
 
-    #window.fill((0, 0, 0)) # Reset window after sending the frame (Reset between each simulation)
     window.blit(background_surface, (0, 0))  # Restore the background image
 
     print(f"Distance between vehicles: {min_distance:.2f} meters")
