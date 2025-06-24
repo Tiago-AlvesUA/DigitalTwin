@@ -73,8 +73,7 @@ class It2s_Tiles:
         return adjacent_tiles   # String list of all adjacent tiles
 
 if __name__ == "__main__":
-    # TODO: Ver isto: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8569941
-    # A ver se encontro uma boa visualizacao do quadtree map
+    # https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8569941
 
     # Initialize the quadtree handler
     it2s = It2s_Tiles()

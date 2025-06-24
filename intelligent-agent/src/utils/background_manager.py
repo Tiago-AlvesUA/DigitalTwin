@@ -16,10 +16,7 @@ def download_tile(tile_x, tile_y, zoom):
     global tile_cache
 
     if (tile_x, tile_y, zoom) in tile_cache:
-        #print(f"Using cached tile {tile_x},{tile_y} @ zoom {zoom}")
         return tile_cache[(tile_x, tile_y, zoom)]
-
-    # print(f"Downloading tile {tile_x},{tile_y} @ zoom {zoom}")
 
     url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
     headers = {"User-Agent": "MyPygameMapApp/1.0 (tiagojba9@gmail.com)"}

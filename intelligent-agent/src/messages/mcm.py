@@ -7,7 +7,6 @@
 import math
 import json
 from dataclasses import dataclass
-from config import DITTO_BASE_URL, DITTO_THING_ID, DITTO_USERNAME, DITTO_PASSWORD
 
 @dataclass
 class Coordinates:

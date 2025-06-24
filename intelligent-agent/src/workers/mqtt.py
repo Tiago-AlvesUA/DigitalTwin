@@ -2,14 +2,12 @@ from utils.tiles import It2s_Tiles
 import time
 import paho.mqtt.client as mqtt
 from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_INITIAL_TOPIC
-from utils.ditto import update_ditto_trajectories#, update_ditto_perception, update_ditto_awareness#, update_ditto_dynamics
 from utils.logger import bcolors
-from workers.ditto_sender import update_ditto_dynamics, update_ditto_awareness, update_ditto_perception 
+from workers.ditto_sender import update_ditto_dynamics, update_ditto_awareness, update_ditto_perception, update_ditto_trajectories
 from messages.cpm import cpm_to_local_perception, create_perception_json
-from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json, cam_to_path_history
-from messages.mcm import mcm_to_local_trajectory, create_trajectories_json, check_point_collisions
+from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json
+from messages.mcm import mcm_to_local_trajectory, create_trajectories_json
 from utils.check_collisions import check_collisions
-
 from utils.ditto import update_speed
 
 current_original_topic = "placeholder"
@@ -101,10 +99,9 @@ def on_message_cb(client, userdata, message):
             # Other vehicle trajectory
             sender_id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
-            #just_to_get_the_trajectories_on_the_map = check_point_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
-            
             # Check if there is collision and get the vehicle id that needs to brake or regain speed
             exists_collision, vehicle_id = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+
             brake_executed = False
             # TODO
             if (exists_collision):

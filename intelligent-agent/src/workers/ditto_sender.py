@@ -1,4 +1,4 @@
-from config import DITTO_USERNAME, DITTO_PASSWORD, DITTO_WS_URL
+from config import DITTO_USERNAME, DITTO_PASSWORD, DITTO_WS_URL, DITTO_THING_NAMESPACE, DITTO_THING_NAME
 from websocket import WebSocketApp
 import json
 import base64
@@ -12,7 +12,7 @@ def update_ditto_awareness(awareness):
         return
     else:
         message = {
-            "topic": "org.acme/my-device-2/things/twin/commands/modify",
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
             "headers": {},
             "path": "/features/Awareness",
             "value": awareness
@@ -26,7 +26,7 @@ def update_ditto_perception(perception):
         return
     else:
         message = {
-            "topic": "org.acme/my-device-2/things/twin/commands/modify",
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
             "headers": {},
             "path": "/features/Perception",
             "value": perception
@@ -41,13 +41,26 @@ def update_ditto_dynamics(dynamics):
         return
     else:
         message = {
-            "topic": "org.acme/my-device-2/things/twin/commands/modify",
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
             "headers": {},
             "path": "/features/Dynamics",
             "value": dynamics
         }
         ws.send(json.dumps(message))
 
+def update_ditto_trajectories(trajectories):
+    global ws
+
+    if ws == None:
+        return
+    else:
+        message = {
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
+            "headers": {},
+            "path": "/features/Trajectories",
+            "value": trajectories
+        }
+        ws.send(json.dumps(message))
 
 def on_open(ws):
     print("[Ditto WS] Connection open for sending telemetry.")

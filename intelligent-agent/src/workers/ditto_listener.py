@@ -2,38 +2,36 @@
 
 # DITTO WS Listener for features/events/...
 
-from config import DITTO_USERNAME, DITTO_PASSWORD, DITTO_WS_URL
+from config import DITTO_USERNAME, DITTO_PASSWORD, DITTO_WS_URL, DITTO_THING_NAMESPACE, DITTO_THING_NAME
 from websocket import WebSocketApp
 import json
 import base64
 import threading
 
-#TODO: Use threading lock here
 latest_awareness = None
 latest_dynamics = None
 data_lock = threading.Lock()
 
-
+# Own car
+def get_dynamics():
+    with data_lock:
+        return latest_dynamics
+    
+# Other vehicles
 def get_awareness():
     with data_lock:
         return latest_awareness
 
-def get_dynamics():
-    with data_lock:
-        return latest_dynamics
-
 # https://eclipse.dev/ditto/basic-changenotifications.html
-#   |
-#   V
 # https://eclipse.dev/ditto/basic-rql.html
 # https://eclipse.dev/ditto/httpapi-protocol-bindings-websocket.html
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
+    ditto_thing_id = f"{DITTO_THING_NAMESPACE}:{DITTO_THING_NAME}"
     # START-SEND-EVENTS: Subscribe for Thing events/change notifications
     # RQL expressions to filter subscription notifications    
-    #ws.send("START-SEND-EVENTS?filter=eq(resource:path,'/features/Awareness')")
-    ws.send("START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-2'),or(eq(resource:path,'/features/Awareness'),eq(resource:path,'/features/Dynamics')))")
+    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),or(eq(resource:path,'/features/Awareness'),eq(resource:path,'/features/Dynamics')))")
 
     #print("[Ditto WS] Sent subscription commands.")
 
