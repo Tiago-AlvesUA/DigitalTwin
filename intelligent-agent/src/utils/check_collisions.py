@@ -124,7 +124,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         draw(space, draw_options)
 
         if collision_time is not None:
-            # collision_detected = True
+            collision_detected = True
             # break
             sender_shape.color = (0, 0, 0, 255)
             receiver_shape.color = (0, 0, 0, 255)
@@ -135,7 +135,9 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     export_final_frame() # The final frame is extracted from the window after the simulation is done and exported to the video_stream
     restore_background() # The window is restored with previous background stitched map before restarting the simulation and drawing of new frame
 
-    lowest_id = min(sender_id, receiver_id)
+    #lowest_id = min(sender_id, receiver_id)
+    # DUMMY ID for now
+    lowest_id = 22
 
     time_overall = time.time() - time_overall  # Calculate time taken for the entire process
     print(f"Time taken for collision check: {time_overall:.2f} seconds")

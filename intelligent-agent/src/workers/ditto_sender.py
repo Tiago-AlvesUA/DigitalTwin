@@ -62,6 +62,23 @@ def update_ditto_trajectories(trajectories):
         }
         ws.send(json.dumps(message))
 
+def update_vehicle_speed(avoidanceSpeedReduction):
+    global ws
+
+    if ws == None:
+        return
+    else:
+        message = {
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
+            "headers": {
+                "content-type": "text/plain",
+                "correlation-id": "reducing-speed"
+            },
+            "path": "/inbox/messages/speed",
+            "value": avoidanceSpeedReduction
+        }
+        ws.send(json.dumps(message))
+
 def on_open(ws):
     print("[Ditto WS] Connection open for sending telemetry.")
 

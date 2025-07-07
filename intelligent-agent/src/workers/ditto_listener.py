@@ -32,6 +32,7 @@ def on_open(ws):
     # START-SEND-EVENTS: Subscribe for Thing events/change notifications
     # RQL expressions to filter subscription notifications    
     ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),or(eq(resource:path,'/features/Awareness'),eq(resource:path,'/features/Dynamics')))")
+    #ws.send("START-SEND-MESSAGES")
 
     #print("[Ditto WS] Sent subscription commands.")
 
@@ -42,15 +43,15 @@ def on_message(ws, message):
         if not data.get("value"):
             return
         
-        feature_path = data.get("path", "")
+        path = data.get("path", "")
         value = data.get("value")
 
         global latest_awareness, latest_dynamics
         with data_lock:
-            if "features/Awareness" in feature_path:
+            if "features/Awareness" in path:
                 #print("[Ditto WS] Awareness Event received:")
                 latest_awareness = value
-            elif "features/Dynamics" in feature_path:
+            elif "features/Dynamics" in path:
                 #print("[Ditto WS] Dynamics Event received:")
                 latest_dynamics = value
     except json.JSONDecodeError:

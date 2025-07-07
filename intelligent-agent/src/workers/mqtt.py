@@ -8,7 +8,7 @@ from messages.cpm import cpm_to_local_perception, create_perception_json
 from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awareness_json
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json
 from utils.check_collisions import check_collisions
-from utils.ditto import update_speed
+from workers.ditto_sender import update_vehicle_speed
 
 current_original_topic = "placeholder"
 current_subscribed_topics = set()
@@ -17,7 +17,7 @@ current_subscribed_topics = set()
 
 last_collision_timestamp = None
 avoidanceBrakingTime = 0.9 # seconds
-avoidanceSpeedReduction = -5 # m/s
+avoidanceSpeedReduction = "Reduce speed to prevent collision!"
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
 
 def manage_current_tile(message):
@@ -107,15 +107,15 @@ def on_message_cb(client, userdata, message):
             if (exists_collision):
                 last_collision_timestamp = time.time()
                 bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
-                bcolors.log_warning_red(f"Vehicle {vehicle_id} must brake")
+                bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
                 # TODO: here the braking action should be published to the station with smallest id
-                update_speed(avoidanceSpeedReduction, "org.acme:my-device-2")
-                brake_executed = True
-            else:
-                if (brake_executed):
-                    if (time.time() - last_collision_timestamp > avoidanceBrakingTime):
-                        bcolors.log_warning_blue("Vehicle can go back to normal speed")
-                        update_speed(-avoidanceSpeedReduction, "org.acme:my-device-2")
+                update_vehicle_speed(avoidanceSpeedReduction)
+            #     brake_executed = True
+            # else:
+            #     if (brake_executed):
+            #         if (time.time() - last_collision_timestamp > avoidanceBrakingTime):
+            #             bcolors.log_warning_blue("Vehicle can go back to normal speed")
+            #             update_vehicle_speed(-avoidanceSpeedReduction, "org.acme:my-device-2")
 
             print()
             # Local trajectories will track trajectories close to the vehicle
