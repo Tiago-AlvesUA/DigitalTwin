@@ -4,7 +4,7 @@
 ### Step 1 - Set the environment
 Download the script from c2e packages, define and set the environment variables and finally, execute the script:
 
-    curl https://www.eclipse.org/packages/packages/cloud2edge/scripts/setCloud2EdgeEnv.sh \
+    curl -L https://www.eclipse.org/packages/packages/cloud2edge/scripts/setCloud2EdgeEnv.sh \
     --output setCloud2EdgeEnv.sh
     chmod u+x setCloud2EdgeEnv.sh
 
