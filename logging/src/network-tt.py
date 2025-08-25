@@ -82,7 +82,8 @@ if __name__ == "__main__":
     processing_thread = Thread(target=process_data)
     processing_thread.start()
 
-    sniff(prn=process_packet, store=False, filter="src port 8884 or dst port 8884")
+    # Port 8883 -> MQTT messages to Eclipse Hono MQTT adapter
+    sniff(prn=process_packet, store=False, filter="src port 8883 or dst port 8883")
 
     running = 0
     processing_thread.join()

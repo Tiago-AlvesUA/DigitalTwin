@@ -1,25 +1,15 @@
 #!/usr/bin/python3
 import sys
-import ssl
 import json
 import time
-import paho.mqtt.client as mqtt
 import dbus
 import dbus.service
 import dbus.mainloop.glib
 from gi.repository import GLib
-
-broker_address = "es-broker.av.it.pt"
-broker_port = 8884
-broker_sub_topic = "its_center/inqueue/json/20/CAM/#"
-broker_pub_topic = "logs/21/DELAY"
-broker_client_id = "delay_logger_mqtt_20"
-broker_certfile_path = "/etc/it2s/mqtt/it2s-station.crt"
-broker_keyfile_path = "/etc/it2s/mqtt/it2s-station.key"
-broker_cafile_path = "/etc/it2s/mqtt/ca.crt"
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, broker_client_id)
-
-system_bus = None
+# import sseclient
+import base64
+# import requests
+from websocket import WebSocketApp
 
 class DelayService(dbus.service.Object):
     """ Set up the D-Bus object """
@@ -46,8 +36,7 @@ def init_dbus():
 
     return system_bus
 
-
-def pub_delay_to_dbus(delay, system_bus):
+def pub_delay_to_dbus(delay):
     global delay_service
     
     try:
@@ -58,55 +47,75 @@ def pub_delay_to_dbus(delay, system_bus):
 
     print(f"Published delay of {delay} to D-Bus")
 
+def on_open(ws):
+    print("[Ditto WS] Connection opened.")
+
+    ditto_thing_id = f"org.acme:my-device-2"
+
+    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),eq(resource:path,'/features/ModemStatus/properties'))")
+
 # When message is received, the delay the message took to arrive to the broker is calculated
-def on_message(client, userdata, message):
-    payload_json = json.loads(message.payload)
+def on_message(ws, message):
+    
+    if message.strip().startswith("START-SEND-EVENTS:ACK"):
+        return
+    
+    try:
+        data = json.loads(message)
 
-    message_gdt = int(payload_json["cam"]["generationDeltaTime"])
-    current_gdt = current_milli_time() % 65536
-    delay_ms = 0
+        if not data.get("value"):
+            return
+        
+        value = data.get("value")
+        message_reftime = int(value["referenceTime"])
+        message_gdt = message_reftime % 65536
+        current_gdt = current_milli_time() % 65536
 
-    if (current_gdt > message_gdt):
-        delay_ms = current_gdt - message_gdt
-    elif (current_gdt < message_gdt):
-        delay_ms = current_gdt + 65536 - message_gdt
-    else:
         delay_ms = 0
 
-    pub_delay_to_dbus(delay_ms, system_bus)
+        if current_gdt > message_gdt:
+            delay_ms = current_gdt - message_gdt
+        elif current_gdt < message_gdt:
+            delay_ms = current_gdt + 65536 - message_gdt
+        else:
+            delay_ms = 0
 
-def on_connect(client, userdata, flags, reason_code, properties):
-    if reason_code.is_failure:
-        print("failed to connect")
+        pub_delay_to_dbus(delay_ms)
+        
+    except Exception as e:
+        print(f"[Ditto WS] Error processing message: {e}")
 
-def on_subscribe(client, userdata, mid, reason_code_list, properties):
-    if reason_code_list[0].is_failure:
-        print(f"broker rejected you subscription: {reason_code_list[0]}")
-    else:
-        print(f"broker granted the following QoS: {reason_code_list[0].value}")
+
+def on_error(ws, error):
+    print("[Ditto WS] Websocket error:", error)
+
+def on_close(ws, close_status_code, close_msg):
+    print("[Ditto WS] Connection closed.")
+
+def listen():
+    auth = "ditto:ditto"
+    b64_auth = base64.b64encode(auth.encode()).decode()
+    headers = {
+        "Authorization": f"Basic {b64_auth}",
+    }
+
+    ws = WebSocketApp(
+        "ws://10.255.41.221:8080/ws/2",
+        on_open=on_open,
+        on_message=on_message,
+        on_error=on_error,
+        on_close=on_close,
+        header=headers
+    )
+
+    ws.run_forever()
+
 
 def main():
-    global system_bus, delay_service
+    global delay_service
     system_bus = init_dbus()
     delay_service = DelayService(system_bus, "/org/example/DataReader")
 
-    client.username_pw_set(username="admin", password="t;RHC_vi")
-
-    client.tls_set(
-        certfile=broker_certfile_path,
-        keyfile=broker_keyfile_path,
-        ca_certs=broker_cafile_path,
-    )
-    #client.tls_insecure_set(True)
-
-    client.on_connect = on_connect
-    client.on_subscribe = on_subscribe
-    client.on_message = on_message
-    client.connect(broker_address, broker_port)
-
-    print("subscribing to " + broker_sub_topic)
-    client.subscribe(broker_sub_topic)
-
-    client.loop_forever()
+    listen()
 
 main()
