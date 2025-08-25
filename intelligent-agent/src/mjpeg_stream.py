@@ -1,15 +1,14 @@
 from flask import Flask, Response, request
 import queue
+import time
+import threading
 
 app = Flask(__name__)
 
-latest_frame = None
-
-frame_queue = queue.Queue(maxsize=10) 
+frame_queue = queue.Queue(maxsize=10)
 
 @app.route('/', methods=['POST'])
 def upload_frame():
-    global latest_frame
     if request.method == 'POST':
         try:
             frame_queue.put(request.data, block=False) 
@@ -20,7 +19,6 @@ def upload_frame():
    
 
 def generate_mjpeg():
-    global latest_frame
     while True:
         try:
             frame = frame_queue.get(timeout=1)  # Wait for a frame to be available

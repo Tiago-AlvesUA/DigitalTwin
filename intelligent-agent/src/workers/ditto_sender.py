@@ -62,22 +62,47 @@ def update_ditto_trajectories(trajectories):
         }
         ws.send(json.dumps(message))
 
-def update_vehicle_speed(avoidanceSpeedReduction):
+def update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction):
     global ws
 
     if ws == None:
         return
     else:
-        message = {
-            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
-            "headers": {
-                "content-type": "text/plain",
-                "correlation-id": "reducing-speed"
-            },
-            "path": "/inbox/messages/speed",
-            "value": avoidanceSpeedReduction
-        }
+        if exists_collision:
+            # If exists a collision, reduce speed for below the limit
+            receiver_speed_kmh = receiver_speed * 0.036  # Convert m/s to km/h
+            advised_speed = receiver_speed_kmh - avoidanceSpeedReduction
+
+            message = {
+                "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
+                "headers": {
+                    "content-type": "text/plain",
+                    "correlation-id": "reducing-speed"
+                },
+                "path": "/inbox/messages/speed",
+                "value": {
+                    "collision": True,
+                    "advisedSpeed": advised_speed
+                }
+            }
+        else:
+            # If no collision, keep current speed
+            advised_speed = receiver_speed * 0.036  # Convert m/s to km/h
+            message = {
+                "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
+                "headers": {
+                    "content-type": "text/plain",
+                    "correlation-id": "no-collision"
+                },
+                "path": "/inbox/messages/speed",
+                "value": {
+                    "collision": False,
+                    "advisedSpeed": advised_speed
+                }
+            }
+        
         ws.send(json.dumps(message))
+
 
 def on_open(ws):
     print("[Ditto WS] Connection open for sending telemetry.")

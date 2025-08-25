@@ -78,7 +78,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     # If there are no dynamics yet, can not do the collision check
     if current_dynamics == None:
         print("No dynamics yet from own vehicle to check for collisions.")
-        return collision_detected, 21
+        return collision_detected, 21, 0  # DUMMY ID and speed
 
     #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
@@ -142,4 +142,4 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     time_overall = time.time() - time_overall  # Calculate time taken for the entire process
     print(f"Time taken for collision check: {time_overall:.2f} seconds")
 
-    return collision_detected, lowest_id
+    return collision_detected, lowest_id, receiver_speed

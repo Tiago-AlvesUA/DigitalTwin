@@ -23,11 +23,12 @@ tile_x, tile_y, zoom = 0, 0, 17
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
 current_grid = []  # Set to hold the current grid of tiles (for pygame background)
 
-def position_of_vehicle(lat, lon):
+def position_of_vehicle(pixel_x, pixel_y):
     global tile_x, tile_y
 
-    x = int(lat - ((tile_x-1) * 256) - WIDTH // 2) # Adjust for tile offset and center the vehicle
-    y = int(-1 * (lon - ((tile_y-1) * 256) - HEIGHT // 2)) # Adjust for tile offset and center the vehicle
+    #print(f"Tile X: {tile_x}, Tile Y: {tile_y}, Pixel X: {pixel_x}, Pixel Y: {pixel_y}")
+    x = int(pixel_x - ((tile_x-1) * 256) - WIDTH // 2) # Adjust for tile offset and center the vehicle
+    y = int(-1 * (pixel_y - ((tile_y-1) * 256) - HEIGHT // 2)) # Adjust for tile offset and center the vehicle
 
     return (x,y)
 
@@ -38,7 +39,7 @@ def latlon_to_img_pixel(lat, lon, zoom=17):
     First, it converts latitude and longitude to Mercator projection coordinates,
     then it calculates the pixel coordinates based on the zoom level.
     """
-
+    # Provides precise pixel coordinates in the correct tile
     lat_rad = math.radians(lat)
     x = math.floor((lon + 180.0) / 360.0 * (2.0 ** zoom) * 256)
     y = math.floor((1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) * 2.0 ** (zoom - 1) * 256)

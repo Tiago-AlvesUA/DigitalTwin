@@ -17,7 +17,7 @@ current_subscribed_topics = set()
 
 last_collision_timestamp = None
 avoidanceBrakingTime = 0.9 # seconds
-avoidanceSpeedReduction = "Reduce speed to prevent collision!"
+avoidanceSpeedReduction = 10
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
 
 def manage_current_tile(message):
@@ -100,16 +100,21 @@ def on_message_cb(client, userdata, message):
             sender_id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
             # Check if there is collision and get the vehicle id that needs to brake or regain speed
-            exists_collision, vehicle_id = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+            exists_collision, vehicle_id, receiver_speed = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
 
-            brake_executed = False
-            # TODO
             if (exists_collision):
                 last_collision_timestamp = time.time()
                 bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
                 bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
-                # TODO: here the braking action should be published to the station with smallest id
-                update_vehicle_speed(avoidanceSpeedReduction)
+            update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction)
+
+            #brake_executed = False
+            # if (exists_collision):
+            #     last_collision_timestamp = time.time()
+            #     bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
+            #     bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
+            #     # TODO: here the braking action should be published to the station with smallest id
+            #     update_vehicle_speed(receiver_speed, avoidanceSpeedReduction)
             #     brake_executed = True
             # else:
             #     if (brake_executed):

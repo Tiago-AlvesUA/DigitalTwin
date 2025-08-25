@@ -50,6 +50,7 @@ def setup_mqtt():
     mqtt_client.loop_start()
 
 # Function to listen for D-Bus signals
+# TODO: Change dbus interface to correct names
 def listen_for_signals():
     bus = dbus.SystemBus()
     bus.add_signal_receiver(on_new_data_available,
@@ -168,14 +169,14 @@ def create_modstatus_msg(args):
                 "mnc": mnc,
                 "ratMode": ratmode,
                 "nr": {
-                    "rsrq": nr_rsrp,
-                    "rsrp": nr_rsrq,
+                    "rsrq": nr_rsrq,
+                    "rsrp": nr_rsrp,
                     "snr": nr_snr,
                     "pci": nr_pci
                 },
                 "lte": {
-                    "rsrq": lte_rsrp,
-                    "rsrp": lte_rsrq,
+                    "rsrq": lte_rsrq,
+                    "rsrp": lte_rsrp,
                     "rssi": lte_rssi,
                     "snr": lte_snr,
                     "pci": lte_pci
