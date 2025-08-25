@@ -15,6 +15,7 @@
 #include "it2s-data-reader.h"
 #include "qmi.h"
 #include <json-c/json.h>
+// new library for D-Bus
 #include <gio/gio.h>
 
 
@@ -41,7 +42,8 @@ unsigned long timestamp_to_its(unsigned long unix_timestamp){
 	if (unix_timestamp == 0)
 		return 0;
 	// ITS timestamp = (seconds since 1970 - seconds before 2004) + leap seconds since 2004
-	return (unix_timestamp - 1072915200) + 5;
+	return ((unix_timestamp * 1000) + 5000) - 1072915200000; 
+	//return (unix_timestamp - 1072915200) + 5;
 }
 
 void com_config(void* com_struct){
@@ -103,23 +105,26 @@ void it2s_make_message(communications_manager_t* communications_manager){
 	int32_t gps_lat = gps_data->latitude.value;
 	int32_t gps_lon = gps_data->longitude.value;
 	int32_t gps_alt = gps_data->altitude.value;
-	ulong timestamp = timestamp_to_its(gps_data->timestamp % 65536);
+	//printf("GPS TIMESTAMP: %lu\n", gps_data->timestamp);
+	ulong gps_timestamp = gps_data->timestamp;
+	//ulong timestamp = timestamp_to_its(gps_data->timestamp);// % 65536);
+	// TODO: 65536 module only after
 
 	printf("GPS: %d, %d, %d\n", gps_lat, gps_lon, gps_alt);
-	printf("Timestamp: %lu\n", timestamp);
+	printf("Timestamp: %lu\n", gps_timestamp);//timestamp);
 	printf("RAT: %d, lte_rssi: %d, lte_rsrq: %d\n", ratmode, lte_rssi, lte_rsrq);
 	printf("CID: %d\n", cid);
 	printf("lte_rsrp: %d, nr_rsrp: %d, lte_snr: %d, nr_snr: %d, nr_rsrq: %d\n", lte_rsrp, nr_rsrp, lte_snr, nr_snr, nr_rsrq);	
 	printf("Message Seq Number: %d\n", communications_manager->msg_sn);
 
 
-	params_variant = g_variant_new("(iiiiiiuiiiiiuuuuui)",
+	params_variant = g_variant_new("(iiiiiiuiiiiiuuuuti)",
 		gps_lat, gps_lon, gps_alt, 
 		ratmode, lte_rssi, lte_rsrq,
 		cid,
 		lte_rsrp, nr_rsrp, lte_snr, nr_snr, nr_rsrq,
 		mcc, mnc, lte_pci, nr_pci,
-		timestamp, communications_manager->msg_sn++
+		gps_timestamp, communications_manager->msg_sn++
 	);
 }
 
