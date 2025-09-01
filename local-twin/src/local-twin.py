@@ -8,15 +8,7 @@ import dbus
 import dbus.mainloop.glib
 import time
 from gi.repository import GLib
-
-# MQTT Configuration
-HONO_BROKER_HOST = "10.255.41.221"
-HONO_BROKER_PORT = 8883
-# auth_id@tenant
-MQTT_USERNAME = "my-auth-id-2@my-tenant"
-MQTT_PASSWORD = "my-password"
-MQTT_TOPIC = "telemetry"
-MQTT_CAFILE = "../certificate/c2e_hono_truststore.pem"
+from config import HONO_BROKER_HOST, HONO_BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_CAFILE, MQTT_TOPIC
 
 mqtt_client = None
 device_id = None
