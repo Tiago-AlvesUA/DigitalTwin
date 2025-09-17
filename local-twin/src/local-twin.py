@@ -60,7 +60,6 @@ def timestamp_to_its(unix_timestamp):
 # Callback function when a es-broker throughput signal is received from D-Bus
 def on_new_esbroker_tt_available(*args):
     global network_throughput, device_id
-    #device_id = "my-device-2" # TODO: Now remains static but to be changed later on
 
     network_throughput[0] = args[0] # rx_bytes
     network_throughput[1] = args[1] # tx_bytes
@@ -85,8 +84,7 @@ def on_new_esbroker_tt_available(*args):
 def on_new_esbroker_delay_available(*args):
     global network_delay, device_id
     network_delay = args[0]
-    #device_id = "my-device-2" # TODO: Now remains static but to be changed later on
-    
+
     unix_timestamp = time.time()
     timestamp = timestamp_to_its(unix_timestamp)
 
@@ -111,8 +109,7 @@ def on_new_data_available(*args):
 def create_modstatus_msg(args):
     global device_id
     print("Previous device ID: ", device_id)
-    #device_id = "my-device-2" # Now remains static but to be changed later on 
-
+    
     gps_latitude = args[0]
     gps_longitude = args[1]
     gps_altitude = args[2]

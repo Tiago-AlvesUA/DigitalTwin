@@ -2,6 +2,10 @@ from flask import Flask, Response, request
 import queue
 import time
 import threading
+import logging
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 
@@ -33,5 +37,5 @@ def video_feed():
     return Response(generate_mjpeg(),
                 mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
-app.run(host="0.0.0.0", port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

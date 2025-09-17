@@ -59,7 +59,7 @@ def collision_handler(arbiter, space, data):
 def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
     global collision_time, time_elapsed
     
-    time_overall = time.time()  # Start timer for performance measurement
+    #time_overall = time.time()  # Start timer for performance measurement
 
     time_elapsed = 0.0
     collision_time = None
@@ -114,9 +114,9 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     flip_y = pymunk.Transform(a=1, b=0, c=0, d=-1, tx=WIDTH // 2, ty=HEIGHT // 2)
     draw_options.transform = flip_y
 
-    # (Test purposes)
-    min_distance = math.sqrt((sender_body.position.x - receiver_body.position.x)**2 + (sender_body.position.y - receiver_body.position.y)**2)
-    print(f"Distance between vehicles: {min_distance:.2f} meters")
+    # (Uncomment to test if the vehicles are being created correctly in the simulation)
+    #min_distance = math.sqrt((sender_body.position.x - receiver_body.position.x)**2 + (sender_body.position.y - receiver_body.position.y)**2)
+    #print(f"Distance between vehicles: {min_distance:.2f} meters")
 
     # Since .step accepts seconds, each step s 1/60th of a second, meaning the checking for collision goes on for 5 seconds (300/60)
     for _ in range(300):
@@ -139,7 +139,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     # DUMMY ID for now
     lowest_id = 22
 
-    time_overall = time.time() - time_overall  # Calculate time taken for the entire process
-    print(f"Time taken for collision check: {time_overall:.2f} seconds")
+    #time_overall = time.time() - time_overall  # Calculate time taken for the entire process
+    #print(f"Time taken for collision check: {time_overall:.2f} seconds")
 
     return collision_detected, lowest_id, receiver_speed
