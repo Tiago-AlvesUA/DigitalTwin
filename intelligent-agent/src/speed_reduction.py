@@ -11,11 +11,11 @@ def send_speed_alert():
     i=0
     while True:
         if ws is not None:
-            if i % 2 == 0:
+            if i < 5:
                 advised_speed = speed - 10
 
                 message = {
-                    "topic": "org.acme/my-device-2/things/live/messages/speed",
+                    "topic": "org.acme/my-device-1/things/live/messages/speed",
                     "headers": {
                         "content-type": "text/plain",
                         "correlation-id": "reducing-speed"
@@ -28,11 +28,14 @@ def send_speed_alert():
                 }
                 ws.send(json.dumps(message))
                 print("[Ditto WS] Speed alert sent.")
+
+                i += 1
+                time.sleep(2)
             else:
                 advised_speed = speed
 
                 message = {
-                    "topic": "org.acme/my-device-2/things/live/messages/speed",
+                    "topic": "org.acme/my-device-1/things/live/messages/speed",
                     "headers": {
                         "content-type": "text/plain",
                         "correlation-id": "no-collision"
@@ -46,8 +49,8 @@ def send_speed_alert():
                 ws.send(json.dumps(message))
                 print("[Ditto WS] Chill Speed alert sent.")
             
-            i += 1
-        time.sleep(30)
+                i = 0
+                time.sleep(4)
 
 def on_open(ws_instance):
     print("[Ditto WS] Connection open for sending speed alerts.")
@@ -67,9 +70,9 @@ def start_sender_ws_listener():
     headers = {
         "Authorization": f"Basic {b64_auth}"
     }
-
+    # TODO: Alterei o link
     ws = WebSocketApp(
-        "ws://10.255.41.221:8080/ws/2",
+        "ws://10.255.41.5:8080/ws/2",
         on_open=on_open,
         on_error=on_error,
         on_close=on_close,

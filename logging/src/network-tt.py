@@ -8,8 +8,9 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 from gi.repository import GLib
+from config import IFACE_NAME
 
-all_ips = [iface.ip for iface in ifaces.values() if iface.name == "it2s_5g"]
+all_ips = [iface.ip for iface in ifaces.values() if iface.name == IFACE_NAME]
 traffic = [0, 0]
 running = 1
 system_bus = None

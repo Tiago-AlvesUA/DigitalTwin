@@ -14,3 +14,4 @@ DITTO_USERNAME = "ditto"
 DITTO_PASSWORD = "ditto"
 
 STREAM_APP = "http://localhost:5000/"
+

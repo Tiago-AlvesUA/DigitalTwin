@@ -10,6 +10,7 @@ from gi.repository import GLib
 import base64
 # import requests
 from websocket import WebSocketApp
+from config import DITTO_WS_URL, DITTO_AUTH, DITTO_THING_NAMESPACE, DITTO_THING_NAME
 
 class DelayService(dbus.service.Object):
     """ Set up the D-Bus object """
@@ -50,7 +51,7 @@ def pub_delay_to_dbus(delay):
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
-    ditto_thing_id = f"org.acme:my-device-2"
+    ditto_thing_id = f"{DITTO_THING_NAMESPACE}:{DITTO_THING_NAME}"
 
     ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),eq(resource:path,'/features/ModemStatus/properties'))")
 
@@ -93,14 +94,12 @@ def on_close(ws, close_status_code, close_msg):
     print("[Ditto WS] Connection closed.")
 
 def listen():
-    auth = "ditto:ditto"
-    b64_auth = base64.b64encode(auth.encode()).decode()
     headers = {
-        "Authorization": f"Basic {b64_auth}",
+        "Authorization": f"Basic {DITTO_AUTH}",
     }
 
     ws = WebSocketApp(
-        "ws://10.255.41.221:8080/ws/2",
+        DITTO_WS_URL,
         on_open=on_open,
         on_message=on_message,
         on_error=on_error,

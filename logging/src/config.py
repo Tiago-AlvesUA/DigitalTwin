@@ -1,0 +1,5 @@
+DITTO_WS_URL = "ws://10.255.41.221:8080/ws/2"
+DITTO_AUTH = "ZGl0dG86ZGl0dG8="
+DITTO_THING_NAMESPACE = "org.acme"
+DITTO_THING_NAME = "my-device-1"
+IFACE_NAME = "it2s_5g"

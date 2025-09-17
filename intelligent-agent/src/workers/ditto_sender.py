@@ -64,6 +64,7 @@ def update_ditto_trajectories(trajectories):
 
 def update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction):
     global ws
+    print("I am in update_vehicle_speed")
 
     if ws == None:
         return

@@ -8,7 +8,7 @@ import dbus
 import dbus.mainloop.glib
 import time
 from gi.repository import GLib
-from config import HONO_BROKER_HOST, HONO_BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_CAFILE, MQTT_TOPIC
+from config import HONO_BROKER_HOST, HONO_BROKER_PORT, HONO_MQTT_USERNAME, HONO_MQTT_PASSWORD, HONO_MQTT_CAFILE, HONO_MQTT_TOPIC, DITTO_THING_NAME, DITTO_THING_NAMESPACE
 
 mqtt_client = None
 device_id = None
@@ -27,16 +27,12 @@ def signal_handler(sig, frame):
 # Function to set up the MQTT client
 def setup_mqtt():
     global mqtt_client, device_id
-    # TODO: Create new toml file for the local-twin
-    itss_cfg = toml.load('/etc/it2s/itss.toml')
-    device_id = itss_cfg['security']['identity']['station-id']
-
     mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
-    mqtt_client.tls_set(MQTT_CAFILE)
+    mqtt_client.tls_set(HONO_MQTT_CAFILE)
     mqtt_client.tls_insecure_set(True)
 
-    mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+    mqtt_client.username_pw_set(HONO_MQTT_USERNAME, HONO_MQTT_PASSWORD)
 
     mqtt_client.connect(HONO_BROKER_HOST, HONO_BROKER_PORT)
     mqtt_client.loop_start()
@@ -64,7 +60,7 @@ def timestamp_to_its(unix_timestamp):
 # Callback function when a es-broker throughput signal is received from D-Bus
 def on_new_esbroker_tt_available(*args):
     global network_throughput, device_id
-    device_id = "my-device-2" # TODO: Now remains static but to be changed later on
+    #device_id = "my-device-2" # TODO: Now remains static but to be changed later on
 
     network_throughput[0] = args[0] # rx_bytes
     network_throughput[1] = args[1] # tx_bytes
@@ -73,7 +69,7 @@ def on_new_esbroker_tt_available(*args):
     timestamp = timestamp_to_its(unix_timestamp)
 
     jobj = {
-        "topic": f"org.acme/{device_id}/things/twin/commands/modify",
+        "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
         "headers": {},
         "path": "/features/NetworkThroughput/properties",
         "value": {
@@ -89,13 +85,13 @@ def on_new_esbroker_tt_available(*args):
 def on_new_esbroker_delay_available(*args):
     global network_delay, device_id
     network_delay = args[0]
-    device_id = "my-device-2" # TODO: Now remains static but to be changed later on
+    #device_id = "my-device-2" # TODO: Now remains static but to be changed later on
     
     unix_timestamp = time.time()
     timestamp = timestamp_to_its(unix_timestamp)
 
     jobj = {
-        "topic": f"org.acme/{device_id}/things/twin/commands/modify",
+        "topic": f"org.acme/{STATION_ID}/things/twin/commands/modify",
         "headers": {},
         "path": "/features/MessageDelay/properties",
         "value": {
@@ -115,7 +111,7 @@ def on_new_data_available(*args):
 def create_modstatus_msg(args):
     global device_id
     print("Previous device ID: ", device_id)
-    device_id = "my-device-2" # Now remains static but to be changed later on 
+    #device_id = "my-device-2" # Now remains static but to be changed later on 
 
     gps_latitude = args[0]
     gps_longitude = args[1]
@@ -138,7 +134,7 @@ def create_modstatus_msg(args):
 
 
     ditto_msg = {
-        "topic": f"org.acme/{device_id}/things/twin/commands/modify",
+        "topic": f"org.acme/{STATION_ID}/things/twin/commands/modify",
         "headers": {},
         "path": "/features/ModemStatus/properties",  # TODO: Modify this path if necessary 
         "value": {
@@ -184,10 +180,10 @@ def create_modstatus_msg(args):
 # Publish data to Hono's MQTT adapter
 def publish_to_mqtt(json_data):
     # Publish the JSON data to the specified topic
-    result = mqtt_client.publish(MQTT_TOPIC, json_data)
+    result = mqtt_client.publish(HONO_MQTT_TOPIC, json_data)
     
     if result.rc == mqtt.MQTT_ERR_SUCCESS:
-        print(f"Published: {json_data} to {MQTT_TOPIC}")
+        print(f"Published: {json_data} to {HONO_MQTT_TOPIC}")
     else:
         print(f"Failed to publish data: {result.rc}")
 
