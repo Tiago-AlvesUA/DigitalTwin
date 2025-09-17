@@ -20,3 +20,6 @@ cd hono
 ./create_ditto_policy.sh
 ./create_ditto_twin.sh
 cd ..
+
+echo "Setup completed successfully."
+echo "Now obtain the c2e_hono_truststore.pem file from /tmp and import it into local-twin certificate folder to enable TLS connections to Hono."
