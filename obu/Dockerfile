@@ -1,22 +1,37 @@
-FROM python:3.10-slim
+# https://gitlab.es.av.it.pt/its/it2s-itss/-/blob/master/INSTALL.md
+FROM ubuntu:24.04
 
 WORKDIR /app
 
-# Install build tools for data-collector
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Add IT2S repo GPG key
+RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certificates \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B48815023F153A3C
+
+# --- Add IT2S repo and update ---
+RUN echo "deb [arch=amd64] https://es.av.it.pt/repo/ubuntu/noble stable main" > /etc/apt/sources.list.d/it2s.list \
+ && apt-get update 
+
+RUN apt-cache search it2s
+
+# --- Install build tools + IT2S packages ---
+RUN apt-get install -y --no-install-recommends \
     gcc g++ cmake make \
     python3-dev build-essential \
-    pkg-config \
-    supervisor \
+    pkg-config supervisor \
+    libglib2.0-dev libmbim-glib-dev libqmi-glib-dev libjson-c-dev \
+    it2s-itss-git \
  && rm -rf /var/lib/apt/lists/*
+
+#ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
 
 # --- Build data-collector ---
 COPY data-collector/ ./data-collector/
 WORKDIR /app/data-collector
-RUN mkdir build && cd build && cmake .. && make 
-#&& cp data-collector /usr/local/bin/ && cd ../.. && rm -rf data-collector
-
-# --- Install dependencies for local-twin and logging ---
+RUN rm -rf build && mkdir build \
+ && echo "=== pkg-config check ===" \
+ && pkg-config --list-all | grep qmi || true \
+ && cd build && cmake .. && make -j$(nproc)
+# --- Install Python deps ---
 WORKDIR /app
 COPY local-twin/ ./local-twin/
 COPY logging/ ./logging/
