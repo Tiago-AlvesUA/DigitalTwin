@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ cmake make \
     python3-dev build-essential \
+    pkg-config \
     supervisor \
  && rm -rf /var/lib/apt/lists/*
 

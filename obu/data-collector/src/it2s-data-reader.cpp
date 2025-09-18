@@ -11,7 +11,7 @@
 #include <argp.h>
 #include <syslog.h>
 #include <libqmi-glib.h>
-#include <mosquitto.h>
+// #include <mosquitto.h>
 #include "it2s-data-reader.h"
 #include "qmi.h"
 #include <json-c/json.h>
