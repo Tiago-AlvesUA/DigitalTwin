@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+  local-twin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: local-twin
+    restart: always

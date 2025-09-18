@@ -1,5 +1,5 @@
 # MQTT Configuration
-HONO_BROKER_HOST = "10.255.41.221"
+HONO_BROKER_HOST = "10.255.41.5"
 HONO_BROKER_PORT = 8883
 # auth_id@tenant
 HONO_MQTT_USERNAME = "my-auth-id-1@my-tenant"
