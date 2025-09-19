@@ -89,7 +89,7 @@ def on_new_esbroker_delay_available(*args):
     timestamp = timestamp_to_its(unix_timestamp)
 
     jobj = {
-        "topic": f"org.acme/{STATION_ID}/things/twin/commands/modify",
+        "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
         "headers": {},
         "path": "/features/MessageDelay/properties",
         "value": {
@@ -131,7 +131,7 @@ def create_modstatus_msg(args):
 
 
     ditto_msg = {
-        "topic": f"org.acme/{STATION_ID}/things/twin/commands/modify",
+        "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
         "headers": {},
         "path": "/features/ModemStatus/properties",  # TODO: Modify this path if necessary 
         "value": {

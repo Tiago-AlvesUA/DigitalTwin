@@ -5,9 +5,9 @@ set -e
 
 python3 -m venv venv
 source venv/bin/activate
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 
-nohup python src/network-delay.py > logs/network-delay.log 2>&1 &
-nohup python src/network-tt.py > logs/network-tt.log 2>&1 &
+nohup python network-delay.py > logs/network-delay.log 2>&1 &
+nohup python network-tt.py > logs/network-tt.log 2>&1 &
 
 echo "Both scripts are running in background. Check logs/network-* for output."
