@@ -1,8 +1,17 @@
 # This test script should create a websocket connection to ditto to receive collision alert messages
+
+# TODO: Box Plots and CDFs of latencies
 from websocket import WebSocketApp
 import json
 import base64
 import time
+import csv
+import sys
+
+latency_log = "results/latencies-mec-obu.csv"
+MAX_SAMPLES = 1000
+
+sample_count = 0
 
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
@@ -11,6 +20,7 @@ def on_open(ws):
     ws.send("START-SEND-MESSAGES")
 
 def on_message(ws, message):
+    global writer, logfile, sample_count
     try:
         msg = json.loads(message)
     except json.JSONDecodeError:
@@ -29,8 +39,20 @@ def on_message(ws, message):
 
     t_rcv_obu = int(time.time() * 1000)  # Current time in milliseconds
     t_gen_mec = value.get("t_gen_mec", 0)
-    delay = t_rcv_obu - t_gen_mec
-    print(f"Latency from MEC to OBU (collision alerts): {delay} ms")
+
+    if t_gen_mec:
+        delay = t_rcv_obu - t_gen_mec
+        print(f"Latency from MEC to OBU (collision alerts): {delay} ms")
+        
+        writer.writerow([delay])
+        logfile.flush()
+
+        sample_count += 1
+        if sample_count >= MAX_SAMPLES:
+            print(f"Collected {MAX_SAMPLES} samples. Stopping listener.")
+            ws.close()
+            sys.exit(0)
+
 
 def on_error(ws, error):
     print("[Ditto WS] Websocket error:", error)
@@ -58,4 +80,8 @@ def start_alert_listener():
     ws.run_forever()
 
 if __name__ == "__main__":
-    start_alert_listener()
+    with open(latency_log, mode='w', newline='') as logfile:
+        global writer
+        writer = csv.writer(logfile)
+        writer.writerow(["Latency (ms)"])
+        start_alert_listener()
