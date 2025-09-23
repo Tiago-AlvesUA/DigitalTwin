@@ -2,6 +2,7 @@ from config import DITTO_USERNAME, DITTO_PASSWORD, DITTO_WS_URL, DITTO_THING_NAM
 from websocket import WebSocketApp
 import json
 import base64
+import time
 
 ws = None
 
@@ -67,41 +68,45 @@ def update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReducti
 
     if ws == None:
         return
-    else:
-        if exists_collision:
-            # If exists a collision, reduce speed for below the limit
-            receiver_speed_kmh = receiver_speed * 0.036  # Convert m/s to km/h
-            advised_speed = receiver_speed_kmh - avoidanceSpeedReduction
 
-            message = {
-                "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
-                "headers": {
-                    "content-type": "text/plain",
-                    "correlation-id": "reducing-speed"
-                },
-                "path": "/inbox/messages/speed",
-                "value": {
-                    "collision": True,
-                    "advisedSpeed": advised_speed
-                }
+    t_gen_mec = int(time.time() * 1000)  # Current time in milliseconds
+
+    if exists_collision:
+        # If exists a collision, reduce speed for below the limit
+        receiver_speed_kmh = receiver_speed * 0.036  # Convert m/s to km/h
+        advised_speed = receiver_speed_kmh - avoidanceSpeedReduction
+
+        message = {
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
+            "headers": {
+                "content-type": "text/plain",
+                "correlation-id": "reducing-speed"
+            },
+            "path": "/inbox/messages/speed",
+            "value": {
+                "t_gen_mec": t_gen_mec,
+                "collision": True,
+                "advisedSpeed": advised_speed
             }
-        else:
-            # If no collision, keep current speed
-            advised_speed = receiver_speed * 0.036  # Convert m/s to km/h
-            message = {
-                "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
-                "headers": {
-                    "content-type": "text/plain",
-                    "correlation-id": "no-collision"
-                },
-                "path": "/inbox/messages/speed",
-                "value": {
-                    "collision": False,
-                    "advisedSpeed": advised_speed
-                }
+        }
+    else:
+        # If no collision, keep current speed
+        advised_speed = receiver_speed * 0.036  # Convert m/s to km/h
+        message = {
+            "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
+            "headers": {
+                "content-type": "text/plain",
+                "correlation-id": "no-collision"
+            },
+            "path": "/inbox/messages/speed",
+            "value": {
+                "t_gen_mec": t_gen_mec,
+                "collision": False,
+                "advisedSpeed": advised_speed
             }
-        
-        ws.send(json.dumps(message))
+        }
+    
+    ws.send(json.dumps(message))
 
 
 def on_open(ws):
