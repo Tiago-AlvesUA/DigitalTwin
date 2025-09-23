@@ -1,0 +1,105 @@
+TESTS TO DO:
+
+- Muitas CAMs a serem enviadas por vários carros. Ditto aguenta?
+- 
+
+
+CONFIGS 5G:
+reboot
+*correr scripts de ligação PC-OBU-redeNOS*
+sudo systemctl stop it2s-5g
+	       start
+sudo qmicli -d /dev/cdc-wdm0 --wds-get-current-settings
+sudo ip addr add 10.165.248.127/24 dev it2s_5g
+sudo ip route add default via 10.165.248.128 dev it2s_5g
+ping -I it2s_5g 8.8.8.8
+sudo ip route add 10.165.250.0/24 via 10.165.248.127 dev it2s_5g
+sudo qmicli -d /dev/cdc-wdm0 --nas-noop --client-cid=9
+
+HONO COMMANDS:
+curl -i -X GET --insecure https://10.165.250.7:28443/v1/credentials/my-tenant/org.acme:my-device-2
+curl -i -X GET --insecure https://10.165.250.7:28443/v1/tenants
+
+#########################################################################################
+HELM DEPLOY DO GRAFANA:
+-> Build and push the custom Docker image into a registry (using GitHubContainerRegistry) the cluster can pull from:
+	docker build -t ghcr.io/atnog/grafana-app-opentwins:12.1.0 .
+	docker push ghcr.io/your-org/grafana-opentwins:12.1.0
+	docker builder prune -f
+
+-> Alterar no deployment.yaml o nome da imagem
+
+-> scp -r ~/Documentos/bolsa/grafana-app-opentwins/helm ssh ubuntu@10.255.41.221:~/helm_test
+
+	(GitHub Personal Access Token (PAT) for images registry of github:
+	|
+	V
+	echo YOUR_PAT | docker login ghcr.io -u tiago-alvesua --password-stdin)
+
+-> kubectl create namespace grafana
+
+-> helm upgrade --install grafana ./ -n grafana
+
+docker push ghcr.io/atnog/grafana/grafana:latest
+
+
+
+###########
+##TESTES##
+###########
+
+	#o-o-o-o#COMEÇAR POR METER A ENVIAR MENSAGEM DE ALERTA DE VOLTA PARA A OBU!!!#o-o-o-o#
+	#o-o-o-o#POR GCP#o-o-o-o#
+	#o-o-o-o#POR IT
+	SINCRONIZAR OBUs COM SERVIDOR NTP do IT#o-o-o-o#
+	
+!!! Fazer latencia que demora o carro a enviar a MCM até o agente fazer a verificaçao de colisao (no Agente) : GERAÇÃO DA MCM -> TERMINADA VERIFICAÇAO DA COLISAO (AGENTE)
+- É preciso raspberry no carro para dar timestamps precisos 
+
+#####################
+!!! Ver quanto tempo demora a receber a mensagem de alerta na OBU (em vez de só receber no grafana) isto é fixe se depois se quiser atuar no carro, chega lá o valor de velocidade e colisão. ISTO É O TEMPO COMPLETO? DESDE O INICIO DA VERIFICAÇAO COLISÃO ATÉ ENVIAR E DEPOIS RECEBER A MSG DE ALERTA, OU, DESDE A GERAÇAO DE MCM?
+******FOCAR NESTE****** (porque o NOS MEC ainda demora uma semana a vir...)
+FOCAR NA PARTE DE COMUNICAR POR 5G À REDE DO IT -> SERVIDOR MTCP OU LA O QUE É PARA SINCRONIZAR -> USAR A OBU QUE ESTÁ NO KIA
+|
+V
+Pode ser com uma MCM vinda da mesma rede? SIM
+##################
+
+
+!!! Quanto tempo demora uma MCM a chegar de uma rede à outra, neste caso ao Agente (por exemplo, da NOS ao agente que estiver no IT) : MCM DE UMA REDE (NOS) -> ATÉ CHEGAR AO AGENTE (IT) (NAO VAI DAR PARA JÁ)
+
+###########
+##TAREFAS##
+###########
+
+- Testar local-twin a comunicar com a 10.255.41.5
+- Meter o agente inteligente na máquina do IT (10.255.41.5:30000) a correr (que vai ser a que irá comunicar com a rede da NOS)
+- Criar container que faça as cenas todas. (c2e config logo de início); serviço systemd para correr o agent, ou não é preciso?
+	|
+	V
+	DONE: para o agente;
+	TODO: dockerfile para o local-twin. 
+
+[Delay e2e é normal estar grande, porque conexão é baixa e é do local-twin (formação da mensagem) para o agente e de volta ao local-twin (full round-trip delay).]
+[ A MAQUINA DO IT TAMBÉM DEVERIA ESTAR A MANDAR AS CENAS POR 5G. PORQUE NÃO FAZ ISSO? A REDE 5G DEVE ESTAR SÓ CONFIGURADA PARA NOS E NÃO PARA O IT ]
+
+#########
+PROCESSO DE INSTALACAO
+#########
+
+c2e-config primeiro na máquina do MEC;
+ir buscar o certificado para meter no local-twin;
+local-twin configs todas certas para baterem certo com maquina do MEC;
+enviar msgs;
+
+Agente:
+correr mjpeg_stream.py;
+correr agent.py;
+
+
+################
+PROBLEMA GRAFANA
+################
+
+-> Se estiverem alertas colisão de 1 em 1 segundo, e se o keep firing for seja 5 segundos, se passado mais dos 5 segundos do keep firing for, mal eu receba uma mensagem sem colisão, o alerta passa logo a normal.
+(Ou seja o keep firing for só funciona realmente por 5s)

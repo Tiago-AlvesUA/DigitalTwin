@@ -1,0 +1,56 @@
+- TODO -> AMANHA VER AS CENAS NO TABLET/MEU PC (SE FOR PC É PRECISO USAR SCRIPTS DE CONEXÃO PRIMEIRO DO MEU PC À OBU E DA OBU À MAQUINA DA REDE NOS GCP), SE O GCP ESTÁ TRANQUILO A ENVIAR INFO DO AGENTE PARA O DITTO, ETC...
+
+
+TODO: Nao esquecer que o codigo de frontend para o Advised Speed panel, tem lá hardcoded o websocket link -> MUDAR PARA SER O QUE ESTA CONFIGURADO PELA DATASOURCE
+TODO: Depois ver a configuraçao dos tempos do evaluation behavior e assim (tem que se testar com a outra maquina que tem tudo primeiro pá)
+
+###################
+## REUNIAO 9 set ##
+###################
+TODO: Ver se devo escrever sobre docker (containers) ou kubernetes na tese;
+TODO: Preparar as máquinas tanto na NOS como no IT para os testes!
+
+
+TODO: Adicionar acronimos em falta; Meter todas as palavras que devem ser acronimos com \ac{}
+
+TODO: Confirmar com David se eu percebi a parte das time epochs e expliquei bem. Porque eu acho que nao expliquei xd:
+Eu acho que 	//printf("GPS TIMESTAMP: %lu\n", gps_data->timestamp);
+		ulong gps_timestamp = gps_data->timestamp;
+o GPS timestamp vem logo no ITS epoch timestamp (e nao em GPS ou UNIX), daí nao ser preciso mudar para ITS
+
+TODO: Talvez modificar a lista de propriedades do verbatim para um listing ou assim (ja tentei mas ainda n consegui...). Era fixe até depois adicionar uma caption e citar onde fosse preciso!
+
+- Grafana precisa de ser instanciada no GCP; DONE
+- Grafana precisa de ser instanciada na nova maquina na NOS; DONE
+- Verificar se a dashboard na máquina do IT tbm tem as métricas todas; (http://10.255.41.221:30000/) DONE
+- Ver qual é o problema na ligação ao Hono no GCP, que não estou a conseguir enviar mensagens. DONE -> Faltava criar a ligação HONO - DITTO (Consumer)
+
+- Dar push para o opentwins das cenas que mudei no helm, para ir buscar a variavel wsUrl e também na Datasource.ts no src code do custom plugin mesmo.
+
+The reason you get “No apiAuth configured in secure settings” even though you see “configured” in the UI is because of how Grafana’s secureJsonData works:
+	>secureJsonData values (like your apiAuth) are only available in the backend plugin, not in the frontend datasource class.
+	>In the frontend (your DataSource.ts), Grafana never sends back the actual secret; it only shows "configured" or "reset" in the UI.
+	
+	
+	O único senão foi mesmo que tive de deixar a autenticação do ditto como estava (hard coded). Penso que o Grafana não permite que valores do secureJsonData sejam usados em código frontend, só funciona para backend. E bem, eu podia migrar esta parte que eu fiz também para o backend, mas acho que agora o tempo já é escasso para isso :grimacing:
+	
+	
+% STILL TO DO:
+****PRATICA****
+- Verificar depois se a dashboard no GCP tem as metricas todas; HALF DONE (falta ver metricas 5G no grafana do IT, pq é preciso a ligação 5G ao IT)
+- Tests
+- LIMPAR A CENA DOS QUERIES QUE ESTÃO A MAIS, NAO SAO NECESSARIOS, POR EXEMPLO NOS PAINEIS DA DASHBOARD. (SÓ DÁ JEITO NOS ALERTAS IG).
+- Ver como o outro rapaz fazia quanto à questão de abrandar a velocidade.
+
+****TEORICA****
+- Meter a referência das APIs logo no capítulo 3? Eu acho que não vale a pena porque é muito superficial, mas talvez já no capítulo 4 na parte do ditto? Eu agora tenho lá HTTP API e WS separados, mas há uma pagina com a comparação
+- Posso falar da cena que os WSs são melhores que requests HTTP apenas na trajectory simulation, quanto ao ditto_listener e ditto_sender? Ou é melhor ser logo na introdução ao agente aonde os refiro pela primeira vez?
+- Distinguir entre quadtree e quadkey em \subsection{Tile Subscription}
+- Falar de RQL expressions do ditto tbm quando inicio a falatória quanto ao worker ditto_listener que produz local_dynamics e depois mais abaixo quando refiro local_awareness (neste momento ja falei nos network logs)
+- Rever a introdução do capítulo 3, está muito bruh...
+- FALAR NA TESEEE QUE CADA CARRO VAI ESTAR EM SUA REDE, E DEPOIS QUE OS BROKERS COMUNICAM PARA QUE UM VEICULO NUMA REDE RECEBA MENSAGENS (MCMs) DO OUTRO VEICULO NA OUTRA REDE -> E que depois faça a verificação de colisões. -> Qual a vantagem disto? É estar em redes diferentes e dar mesmo assim?
+- *Acabar de escrever conceito do Digital Twin* HOJE
+- *Meter acrónimos* HOJE
+- **IMPORTANTE** -> FAZER ESTRUTURA MCM PARA O CHAPTER2 ONDE DEFINO A MSG?
+
+
