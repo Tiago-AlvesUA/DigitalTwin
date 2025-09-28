@@ -1,7 +1,7 @@
 from utils.tiles import It2s_Tiles
 import time
 import paho.mqtt.client as mqtt
-from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_INITIAL_TOPIC
+from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_INITIAL_TOPIC, ITSS_ID
 from utils.logger import bcolors
 from workers.ditto_sender import update_ditto_dynamics, update_ditto_awareness, update_ditto_perception, update_ditto_trajectories
 from messages.cpm import cpm_to_local_perception, create_perception_json
@@ -70,7 +70,7 @@ def on_message_cb(client, userdata, message):
         pass
 
     # TODO: Change to station id to 22/201
-    if (station_id == "22"):
+    if (station_id == ITSS_ID):
         if ("CAM" in message.topic):
             # Now switched management of current tile here, because MCMs do not have the tile path
             manage_current_tile(message)
@@ -80,7 +80,7 @@ def on_message_cb(client, userdata, message):
             update_ditto_dynamics(dynamics)
 
     # TODO: Change to station id to 22/201
-    elif (station_id != "22"):
+    elif (station_id != ITSS_ID):
         #print(f"Received message from station {station_id} on topic {message.topic}")
         # NOTE: Right now there are no CPMs being published by other vehicles, so this is not being used
         if ("CPM" in message.topic):
@@ -122,7 +122,7 @@ def on_message_cb(client, userdata, message):
             #             bcolors.log_warning_blue("Vehicle can go back to normal speed")
             #             update_vehicle_speed(-avoidanceSpeedReduction, "org.acme:my-device-2")
 
-            print()
+            #print()
             # Local trajectories will track trajectories close to the vehicle
             
             # TODO: need to test updating Coordinates to ditto (check if structure is right)
