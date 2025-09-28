@@ -7,10 +7,14 @@ from websocket import WebSocketApp
 import json
 import base64
 import threading
+import time
 
 latest_awareness = None
 latest_dynamics = None
 data_lock = threading.Lock()
+
+def current_milli_time():
+    return (round(time.time() * 1000) + 5000) - 1072915200000
 
 # Own car
 def get_dynamics():
@@ -49,11 +53,43 @@ def on_message(ws, message):
         global latest_awareness, latest_dynamics
         with data_lock:
             if "features/Awareness" in path:
-                #print("[Ditto WS] Awareness Event received:")
+                # TODO: Time it took to receive the event
+                # TODO: Subtract generation delta time of the message (CAM) to get real latency
+
                 latest_awareness = value
+            
+                # Get the delay the message took to be processed into a feature and received as an event
+                t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
+                t_cam_gen_obu = value.get("generationDeltaTime", 0)
+
+                if t_cam_gen_obu:
+                    if t_awareness_rcv_mec > t_cam_gen_obu:
+                        delay = t_awareness_rcv_mec - t_cam_gen_obu
+                    elif t_awareness_rcv_mec < t_cam_gen_obu:
+                        delay = t_awareness_rcv_mec + 65536 - t_cam_gen_obu
+                    else:
+                        delay = 0
+
+                    print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
+
+            # Own car data (CAMs)
             elif "features/Dynamics" in path:
-                #print("[Ditto WS] Dynamics Event received:")
                 latest_dynamics = value
+
+                # # Get the delay the message took to be processed into a feature and received as an event
+                # t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
+                # t_cam_gen_obu = value.get("generationDeltaTime", 0)
+
+                # if t_cam_gen_obu:
+                #     if t_awareness_rcv_mec > t_cam_gen_obu:
+                #         delay = t_awareness_rcv_mec - t_cam_gen_obu
+                #     elif t_awareness_rcv_mec < t_cam_gen_obu:
+                #         delay = t_awareness_rcv_mec + 65536 - t_cam_gen_obu
+                #     else:
+                #         delay = 0
+
+                #     print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
+
     except json.JSONDecodeError:
         print("[Ditto WS] Received non-JSON message:")
         #print(message)
