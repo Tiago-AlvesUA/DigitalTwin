@@ -58,27 +58,9 @@ def on_message(ws, message):
 
                 latest_awareness = value
             
-                # Get the delay the message took to be processed into a feature and received as an event
-                t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
-                t_cam_gen_obu = value.get("generationDeltaTime", 0)
-
-                if t_cam_gen_obu:
-                    if t_awareness_rcv_mec > t_cam_gen_obu:
-                        delay = t_awareness_rcv_mec - t_cam_gen_obu
-                    elif t_awareness_rcv_mec < t_cam_gen_obu:
-                        delay = t_awareness_rcv_mec + 65536 - t_cam_gen_obu
-                    else:
-                        delay = 0
-
-                    print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
-
-            # Own car data (CAMs)
-            elif "features/Dynamics" in path:
-                latest_dynamics = value
-
                 # # Get the delay the message took to be processed into a feature and received as an event
                 # t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
-                # t_cam_gen_obu = value.get("generationDeltaTime", 0)
+                # t_cam_gen_obu = value.get("properties",{}).get("generationDeltaTime", 0)
 
                 # if t_cam_gen_obu:
                 #     if t_awareness_rcv_mec > t_cam_gen_obu:
@@ -89,6 +71,24 @@ def on_message(ws, message):
                 #         delay = 0
 
                 #     print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
+
+            # Own car data (CAMs)
+            elif "features/Dynamics" in path:
+                latest_dynamics = value
+
+                # # Get the delay the message took to be processed into a feature and received as an event
+                # t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
+                # t_cam_gen_obu = value.get("properties",{}).get("generationDeltaTime", 0)
+
+                # if t_cam_gen_obu:
+                #     if t_awareness_rcv_mec > t_cam_gen_obu:
+                #         delay = t_awareness_rcv_mec - t_cam_gen_obu
+                #     elif t_awareness_rcv_mec < t_cam_gen_obu:
+                #         delay = t_awareness_rcv_mec + 65536 - t_cam_gen_obu
+                #     else:
+                #         delay = 0
+
+                #     #print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
 
     except json.JSONDecodeError:
         print("[Ditto WS] Received non-JSON message:")
