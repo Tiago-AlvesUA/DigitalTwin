@@ -21,7 +21,7 @@ def current_milli_time():
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
-    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),eq(resource:path,'/features/ModemStatus'))")
+    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),eq(resource:path,'/features/ModemStatus/properties'))")
 
 def on_message(ws, message):
     global writer, logfile, sample_count
@@ -42,9 +42,12 @@ def on_message(ws, message):
     elif "features/ModemStatus" in path:
 
         # Get the delay the message took to be processed into a feature and received as an event
-        t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
-        t_cam_gen_obu_raw = value.get("properties",{}).get("referenceTime", 0)
-        print(f"t_cam_gen_obu: {t_cam_gen_obu}")
+        t_awareness_rcv_mec_raw = current_milli_time() #% 65536  # Current time in milliseconds
+        print(f"t_awareness_rcv_mec: {t_awareness_rcv_mec_raw}")
+        t_awareness_rcv_mec = t_awareness_rcv_mec_raw % 65536  # Current time in milliseconds, modulo 65536 to match CAM reference time format
+        #t_cam_gen_obu_raw = value.get("properties",{}).get("referenceTime", 0)
+        t_cam_gen_obu_raw = value.get("referenceTime", 0)
+        print(f"t_cam_gen_obu: {t_cam_gen_obu_raw}")
         t_cam_gen_obu = t_cam_gen_obu_raw % 65536  # Reference time from the CAM, in milliseconds
 
         if t_cam_gen_obu:
