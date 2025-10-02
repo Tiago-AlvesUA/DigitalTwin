@@ -17,7 +17,7 @@
 #include <json-c/json.h>
 // new library for D-Bus
 #include <gio/gio.h>
-
+#include <sys/time.h>
 
 extern "C" {
 	#include <it2s-gnss.h>
@@ -106,7 +106,14 @@ void it2s_make_message(communications_manager_t* communications_manager){
 	int32_t gps_lon = gps_data->longitude.value;
 	int32_t gps_alt = gps_data->altitude.value;
 	//printf("GPS TIMESTAMP: %lu\n", gps_data->timestamp);
-	ulong gps_timestamp = gps_data->timestamp;
+	//ulong gps_timestamp = gps_data->timestamp;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	unsigned long long millisecondsSinceEpoch =
+		(unsigned long long)(tv.tv_sec) * 1000 +
+		(unsigned long long)(tv.tv_usec) / 1000;
+
+	ulong gps_timestamp = timestamp_to_its(millisecondsSinceEpoch);
 	//ulong timestamp = timestamp_to_its(gps_data->timestamp);// % 65536);
 	// TODO: 65536 module only after
 

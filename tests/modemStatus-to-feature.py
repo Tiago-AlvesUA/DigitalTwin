@@ -10,7 +10,7 @@ import time
 import csv
 import sys
 
-latency_log = "results/latencies-cam-to-feature.csv"
+latency_log = "results/latencies-modemStatus-to-feature.csv"
 MAX_SAMPLES = 1000
 
 sample_count = 0
@@ -21,7 +21,7 @@ def current_milli_time():
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
-    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),or(eq(resource:path,'/features/Awareness'),eq(resource:path,'/features/Dynamics')))")
+    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),(eq(resource:path,'/features/ModemStatus')))")
 
 def on_message(ws, message):
     global writer, logfile, sample_count
@@ -39,11 +39,13 @@ def on_message(ws, message):
         return
     
     # Own car data (CAMs)
-    elif "features/Dynamics" in path:
+    elif "features/ModemStatus" in path:
 
         # Get the delay the message took to be processed into a feature and received as an event
         t_awareness_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds
-        t_cam_gen_obu = value.get("properties",{}).get("generationDeltaTime", 0)
+        t_cam_gen_obu_raw = value.get("properties",{}).get("referenceTime", 0)
+        print(f"t_cam_gen_obu: {t_cam_gen_obu}")
+        t_cam_gen_obu = t_cam_gen_obu_raw % 65536  # Reference time from the CAM, in milliseconds
 
         if t_cam_gen_obu:
             if t_awareness_rcv_mec > t_cam_gen_obu:
