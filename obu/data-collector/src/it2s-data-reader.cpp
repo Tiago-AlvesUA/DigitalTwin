@@ -42,7 +42,7 @@ unsigned long timestamp_to_its(unsigned long unix_timestamp){
 	if (unix_timestamp == 0)
 		return 0;
 	// ITS timestamp = (seconds since 1970 - seconds before 2004) + leap seconds since 2004
-	return ((unix_timestamp * 1000) + 5000) - 1072915200000; 
+	return (unix_timestamp + 5000) - 1072915200000; 
 	//return (unix_timestamp - 1072915200) + 5;
 }
 
