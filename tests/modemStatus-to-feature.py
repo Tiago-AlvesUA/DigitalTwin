@@ -21,7 +21,7 @@ def current_milli_time():
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
-    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),(eq(resource:path,'/features/ModemStatus')))")
+    ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'org.acme:my-device-1'),eq(resource:path,'/features/ModemStatus'))")
 
 def on_message(ws, message):
     global writer, logfile, sample_count
