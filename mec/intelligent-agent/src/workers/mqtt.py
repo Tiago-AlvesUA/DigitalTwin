@@ -1,5 +1,5 @@
 from utils.tiles import It2s_Tiles
-import time
+import time, csv
 import paho.mqtt.client as mqtt
 from config import BROKER_HOST, BROKER_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_INITIAL_TOPIC, ITSS_ID
 from utils.logger import bcolors
@@ -19,6 +19,16 @@ last_collision_timestamp = None
 avoidanceBrakingTime = 0.9 # seconds
 avoidanceSpeedReduction = 10
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
+
+logfile = open('results/latencies-mec-obu.csv', mode='w', newline='')
+writer = csv.writer(logfile)
+writer.writerow(['sender_id', 'delay_ms'])
+
+MAX_SAMPLES = 1000
+sample_count = 0
+
+def current_milli_time():
+    return (round(time.time() * 1000) + 5000) - 1072915200000
 
 def manage_current_tile(message):
     global current_original_topic, current_subscribed_topics
@@ -97,33 +107,35 @@ def on_message_cb(client, userdata, message):
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
-            sender_id, timestamp, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
+            sender_id, mcm_gdt, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
             # Check if there is collision and get the vehicle id that needs to brake or regain speed
             exists_collision, vehicle_id, receiver_speed = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
+
+
+            # Check timestamp_end_check_collision against timestamp obtained from mcm_to_local_trajectory
+            t_collision_check_done = current_milli_time() % 65536
+            if t_collision_check_done > mcm_gdt:
+                delay = t_collision_check_done - mcm_gdt
+            elif t_collision_check_done < mcm_gdt:
+                delay = t_collision_check_done + 65536 - mcm_gdt
+            else:
+                delay = 0
+            
+            writer.writerow([sender_id, delay])
+            logfile.flush()
+
+            sample_count += 1
+            if sample_count >= MAX_SAMPLES:
+                print(f"Collected {MAX_SAMPLES} samples. Stopping listener.")
+                logfile.close()
+                mqtt_client.disconnect()
 
             if (exists_collision):
                 last_collision_timestamp = time.time()
                 bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
                 bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
             update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction)
-
-            #brake_executed = False
-            # if (exists_collision):
-            #     last_collision_timestamp = time.time()
-            #     bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
-            #     bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
-            #     # TODO: here the braking action should be published to the station with smallest id
-            #     update_vehicle_speed(receiver_speed, avoidanceSpeedReduction)
-            #     brake_executed = True
-            # else:
-            #     if (brake_executed):
-            #         if (time.time() - last_collision_timestamp > avoidanceBrakingTime):
-            #             bcolors.log_warning_blue("Vehicle can go back to normal speed")
-            #             update_vehicle_speed(-avoidanceSpeedReduction, "org.acme:my-device-2")
-
-            #print()
-            # Local trajectories will track trajectories close to the vehicle
             
             # TODO: need to test updating Coordinates to ditto (check if structure is right)
             local_trajectories_json = create_trajectories_json(sender_id, timestamp, sender_trajectory)

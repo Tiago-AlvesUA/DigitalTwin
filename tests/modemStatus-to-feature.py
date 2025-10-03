@@ -35,30 +35,22 @@ def on_message(ws, message):
     path = msg.get("path", "")
     value = msg.get("value")
 
-    if "features/Awareness" in path:
-        return
-    
     # Own car data (CAMs)
-    elif "features/ModemStatus" in path:
-
+    if "features/ModemStatus" in path:
         # Get the delay the message took to be processed into a feature and received as an event
-        t_awareness_rcv_mec_raw = current_milli_time() #% 65536  # Current time in milliseconds
-        print(f"t_awareness_rcv_mec: {t_awareness_rcv_mec_raw}")
-        t_awareness_rcv_mec = t_awareness_rcv_mec_raw % 65536  # Current time in milliseconds, modulo 65536 to match CAM reference time format
-        #t_cam_gen_obu_raw = value.get("properties",{}).get("referenceTime", 0)
-        t_cam_gen_obu_raw = value.get("referenceTime", 0)
-        print(f"t_cam_gen_obu: {t_cam_gen_obu_raw}")
-        t_cam_gen_obu = t_cam_gen_obu_raw % 65536  # Reference time from the CAM, in milliseconds
+        t_feature_update_rcv_mec = current_milli_time() % 65536  # Current time in milliseconds, modulo 65536 to match CAM reference time format
+        t_modStatus_gen_obu_raw = value.get("referenceTime", 0)
+        t_modStatus_gen_obu = t_modStatus_gen_obu_raw % 65536  # Reference time from the CAM, in milliseconds
 
-        if t_cam_gen_obu:
-            if t_awareness_rcv_mec > t_cam_gen_obu:
-                delay = t_awareness_rcv_mec - t_cam_gen_obu
-            elif t_awareness_rcv_mec < t_cam_gen_obu:
-                delay = t_awareness_rcv_mec + 65536 - t_cam_gen_obu
+        if t_modStatus_gen_obu:
+            if t_feature_update_rcv_mec > t_modStatus_gen_obu:
+                delay = t_feature_update_rcv_mec - t_modStatus_gen_obu
+            elif t_feature_update_rcv_mec < t_modStatus_gen_obu:
+                delay = t_feature_update_rcv_mec + 65536 - t_modStatus_gen_obu
             else:
                 delay = 0
 
-            #print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
+            #print(f"Network delay from OBU to MEC (Process into feature and retrieved in a WS connection): {delay} ms")
             writer.writerow([delay])
             logfile.flush()
 
@@ -67,6 +59,7 @@ def on_message(ws, message):
                 print(f"Collected {MAX_SAMPLES} samples. Stopping listener.")
                 ws.close()
                 sys.exit(0)      
+
 
 def on_error(ws, error):
     print("[Ditto WS] Websocket error:", error)
