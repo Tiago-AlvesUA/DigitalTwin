@@ -17,7 +17,7 @@ mcm_reception = read_floats(mcm_reception_file)
 check_collision_done = read_floats(check_collision_done_file)
 
 # --- Compute differences (in milliseconds) ---
-diffs_ms = [int((check_collision_done[i] - mcm_reception[i]) * 1000) for i in range(1000)]
+diffs_ms = [int((check_collision_done[i] - mcm_reception[i]) * 1020) for i in range(1020)]
 
 
 print(f"Average delay: {statistics.mean(diffs_ms)} ms")

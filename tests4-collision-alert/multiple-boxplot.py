@@ -1,18 +1,19 @@
 # boxplot_delays.py
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Filenames
-file1 = "day1/results/mcm-reception-delays.csv"
-file2 = "day1/results/collision-check-delays.csv"
-file3 = "day1/results/checkcoll-to-ditto-delays.csv"
-file4 = "day1/results/ditto-to-ws-delays.csv"
-file5 = "day1/results/total-delays.csv"
+file1 = "results/mcm-reception-delays.csv"
+file2 = "results/collision-check-delays.csv"
+file3 = "results/checkcoll-to-ditto-delays.csv"
+file4 = "results/ditto-to-ws-delays.csv"
+file5 = "results/total-delays.csv"
 
 # --- Helper function ---
 def read_integers(filename):
     """Read integers from a CSV file, skipping the header."""
     with open(filename) as f:
-        lines = f.readlines()[18:]  # TODO: change if needed (skip header and first 17 lines where collision check was not active)
+        lines = f.readlines()[21:]  # TODO: change if needed (skip header and first 20 lines where collision check was not active)
     return [int(line.strip()) for line in lines]
 
 # --- Read data ---
@@ -24,7 +25,25 @@ total = read_integers(file5)
 
 # --- Prepare data for box plot ---
 data = [obu_agent, coll_check_proc, alert_ditto, ditto_ws, total]
-labels = ["OBU → MEC(Broker → Agent)", "Collision Check", "Alert Generation → Ditto", "MEC(Ditto) → OBU(WS)", "Total Delay"]
+labels = ["OBU → Broker → Agent", "Collision Check", "Alert Generation → Ditto", "Ditto → OBU(WS Client)", "End-to-End Total Delay"]
+
+# --- Compute statistics ---
+print("Delay Statistics (in ms):")
+print("-" * 60)
+for label, values in zip(labels, data):
+    values = np.array(values)
+    median = np.median(values)
+    q1 = np.percentile(values, 25)
+    q3 = np.percentile(values, 75)
+    iqr = q3 - q1
+    minimum = np.min(values)
+    maximum = np.max(values)
+    print(f"{label}:")
+    print(f"  Median: {median:.2f} ms")
+    print(f"  IQR (Q3 - Q1): {iqr:.2f} ms  [Q1={q1:.2f}, Q3={q3:.2f}]")
+    print(f"  Min: {minimum:.2f} ms,  Max: {maximum:.2f} ms\n")
+
+
 
 # --- Plot ---
 plt.figure(figsize=(10, 6))
@@ -42,5 +61,5 @@ plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tight_layout()
 
 # Save and show
-plt.savefig("day1/charts/multiple-boxplot-delays.png", dpi=300)
+plt.savefig("charts/multiple-boxplot-delays.png", dpi=300)
 plt.show()

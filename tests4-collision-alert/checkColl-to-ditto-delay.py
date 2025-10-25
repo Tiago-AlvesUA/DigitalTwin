@@ -24,13 +24,7 @@ with open(ditto_file, "r") as f:
     ditto_times = [parse_ditto_time(line) for line in f if line.strip()]
 
 # --- Compute per-message delay ---
-delays = [int((ditto_times[i] - checkColl_times[i]) * 1000) for i in range(1000)]
-
-print("FIRST check-collision UTC:", datetime.utcfromtimestamp(checkColl_times[0]))
-
-print("LAST check-collision UTC:", datetime.utcfromtimestamp(checkColl_times[1000-1]))
-#print("First ditto-receive UTC:", datetime.utcfromtimestamp(ditto_times[0]))
-
+delays = [int((ditto_times[i] - checkColl_times[i]) * 1020) for i in range(1020)]
 
 # --- Print summary statistics ---
 print(f"Compared 1000 messages")

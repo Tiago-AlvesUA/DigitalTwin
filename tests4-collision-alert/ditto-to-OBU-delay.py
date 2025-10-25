@@ -22,7 +22,7 @@ with open(ditto_file, "r") as f:
     ditto_times = [parse_ditto_time(line) for line in f if line.strip()]
 
 # --- Compute per-message delay ---
-delays = [int((ws_receive_times[i] - ditto_times[i]) * 1000) for i in range(1000)]
+delays = [int((ws_receive_times[i] - ditto_times[i]) * 1020) for i in range(1020)]
 
 # --- Print summary statistics ---
 print(f"Compared 100 messages")

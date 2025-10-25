@@ -3,17 +3,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Filenames
-file1 = "day1/results/mcm-reception-delays.csv"
-file2 = "day1/results/collision-check-delays.csv"
-file3 = "day1/results/checkcoll-to-ditto-delays.csv"
-file4 = "day1/results/ditto-to-ws-delays.csv"
-file5 = "day1/results/total-delays.csv"
+file1 = "results/mcm-reception-delays.csv"
+file2 = "results/collision-check-delays.csv"
+file3 = "results/checkcoll-to-ditto-delays.csv"
+file4 = "results/ditto-to-ws-delays.csv"
+file5 = "results/total-delays.csv"
 
 # --- Helper function ---
 def read_integers(filename):
     """Read integers from a CSV file, skipping the header."""
     with open(filename) as f:
-        lines = f.readlines()[18:]  # TODO: change if needed (skip header and first 17 lines where collision check was not active)
+        lines = f.readlines()[21:]  # TODO: change if needed (skip header and first 20 lines where collision check was not active)
     return np.array([int(line.strip()) for line in lines])
 
 # --- Read data ---
@@ -39,11 +39,14 @@ x5, y5 = compute_cdf(total)
 
 # --- Plot ---
 plt.figure(figsize=(10, 6))
-plt.plot(x1, y1, label="OBU → MEC(Broker → Agent)", linewidth=1.8, color="blue")
+plt.plot(x1, y1, label="OBU → Broker → Agent", linewidth=1.8, color="blue")
 plt.plot(x2, y2, label="Collision Check", linewidth=1.8, color="orange")
 plt.plot(x3, y3, label="Alert Generation → Ditto", linewidth=1.8, color="green")
-plt.plot(x4, y4, label="MEC(Ditto) → OBU(WS)", linewidth=1.8, color="red")
-plt.plot(x5, y5, label="Total Delay", linewidth=1.8, color="purple")
+plt.plot(x4, y4, label="Ditto → OBU(WS Client)", linewidth=1.8, color="red")
+plt.plot(x5, y5, label="End-to-End Total Delay", linewidth=1.8, color="purple")
+
+avg_total_delay = int(np.mean(total))
+plt.axvline(x=avg_total_delay, color="purple", linestyle="--", linewidth=1.8, label=f"Average End-to-End Delay = {avg_total_delay} ms")
 
 plt.title("CDF of Communication/Process Delays")
 plt.xlabel("Delay (ms)")
@@ -55,5 +58,5 @@ plt.tight_layout()
 #plt.xlim(0,200)
 
 # Save and show
-plt.savefig("day1/charts/multiple-cdf-delays.png", dpi=300)
+plt.savefig("charts/multiple-cdf-delays.png", dpi=300)
 plt.show()
