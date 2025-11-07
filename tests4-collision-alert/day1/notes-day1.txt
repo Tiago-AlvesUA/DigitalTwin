@@ -1,5 +1,0 @@
-All the times seem alright, however check collision is a bit high possibly due to:
-- Simulation loop duration (300 steps, 60 per second, 5 seconds) -> Experimentar menos steps e assim
-- Ainda está a fazer draw no for loop -> Experimentar comentar no código!!!
-- Pedir ao David para meter OBU a mexer. Ver se no timestamp em que houve colisão há diferenças de tempo
-- get_dynamics() has a lock, so if the local_dynamics value is being modified with a feature update this can cause delay.
