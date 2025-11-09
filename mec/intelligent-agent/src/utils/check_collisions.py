@@ -14,6 +14,7 @@ collision_time = None
 def compass_to_trigonometric_angle(degrees_heading):
     return math.radians(90 - degrees_heading)
 
+# This function is still not used, but it can be useful in the future
 def apply_force(vehicle, acceleration):
     force = vehicle.mass * acceleration # F = m * a (Newton's second law)
     heading = vehicle.angle
@@ -38,7 +39,6 @@ def create_vehicle(space, position, mass, width, length, heading, speed, color):
     velocity_y = speed * math.sin(heading)
     body.velocity = (velocity_x, velocity_y)
 
-    # pymunk.Poly is a convex polygon shape
     shape = pymunk.Poly.create_box(body, (width, length))
     shape.mass = mass
     shape.collision_type = 1
@@ -58,8 +58,6 @@ def collision_handler(arbiter, space, data):
 
 def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_heading, sender_trajectory):
     global collision_time, time_elapsed
-    
-    #time_overall = time.time()  # Start timer for performance measurement
 
     time_elapsed = 0.0
     collision_time = None
@@ -72,7 +70,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
 
     collision_detected = False
 
-    # Collect receiver information (dynamics)
+    # Collect Dynamics feature information (own vehicle)
     current_dynamics = get_dynamics()
 
     # If there are no dynamics yet, can not do the collision check
@@ -80,7 +78,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
         print("No dynamics yet from own vehicle to check for collisions.")
         return collision_detected, 21, 0  # DUMMY ID and speed
 
-    #### RECEIVER DATA #### TODO: No need to get ID from the vehicle since i already get it from the toml file (?)
+    #### RECEIVER DATA #### TODO: Get the ID from config file instead
     receiver_lat = current_dynamics["properties"]["basicContainer"]["referencePosition"]["latitude"]
     receiver_lon = current_dynamics["properties"]["basicContainer"]["referencePosition"]["longitude"]
     receiver_heading = current_dynamics["properties"]["highFrequencyContainer"]["heading"]["headingValue"]
@@ -89,7 +87,8 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
 
     # Draws background map and path histories of vehicles in pygame
     create_collision_visualizer(current_dynamics, receiver_lat, receiver_lon, sender_id, sender_lat, sender_lon)
-    # Get pygame surfaces and values
+
+    # Get pygame surface and values
     WIDTH, HEIGHT = get_window_dimensions()
     window = get_window_surface()
 
@@ -114,7 +113,7 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     flip_y = pymunk.Transform(a=1, b=0, c=0, d=-1, tx=WIDTH // 2, ty=HEIGHT // 2)
     draw_options.transform = flip_y
 
-    # (Uncomment to test if the vehicles are being created correctly in the simulation)
+    # NOTE: Uncomment to check distance between vehicles for debugging
     #min_distance = math.sqrt((sender_body.position.x - receiver_body.position.x)**2 + (sender_body.position.y - receiver_body.position.y)**2)
     #print(f"Distance between vehicles: {min_distance:.2f} meters")
 
@@ -135,11 +134,9 @@ def check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_hea
     export_final_frame() # The final frame is extracted from the window after the simulation is done and exported to the video_stream
     restore_background() # The window is restored with previous background stitched map before restarting the simulation and drawing of new frame
 
-    #lowest_id = min(sender_id, receiver_id)
+    # TODO: The alert message should only be sent to the vehicle with the lowest ID (for that, receiver_id from config file or Ditto must be in harmony with the sender_id from the MCM message)
+    # lowest_id = min(sender_id, receiver_id)
     # DUMMY ID for now
     lowest_id = 22
-
-    #time_overall = time.time() - time_overall  # Calculate time taken for the entire process
-    #print(f"Time taken for collision check: {time_overall:.2f} seconds")
 
     return collision_detected, lowest_id, receiver_speed

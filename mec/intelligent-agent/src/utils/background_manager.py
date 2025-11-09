@@ -1,11 +1,11 @@
 import requests
 from PIL import Image
 from io import BytesIO
-from pyquadkey2 import quadkey  # Assuming you have a quadkey module for handling
+from pyquadkey2 import quadkey
 
 tile_cache = {}  # Global cache for downloaded tiles
 
-# Knowing it is a 768x768 grid of tiles,the possitions are done accordingly to the order of adjacent_tiles() from tiles.py
+# Knowing it is a 768x768 grid of tiles, the possitions are done accordingly to the order of adjacent_tiles() from tiles.py
 POSITIONS_PIXELS = [
         (512, 256),   (0, 256),   (256, 512),
         (256,0), (512,0), (512, 512), 
@@ -23,11 +23,11 @@ def download_tile(tile_x, tile_y, zoom):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         tile = Image.open(BytesIO(response.content))
-        tile_cache[(tile_x, tile_y, zoom)] = tile  # Cache the downloaded tile
+        tile_cache[(tile_x, tile_y, zoom)] = tile  # Store the newly downloaded tile in cache
         return tile
     else:
         print(f"Failed to download tile {tile_x},{tile_y} @ zoom {zoom}")
-        return Image.new("RGB", (256, 256), (0, 0, 0))  # fallback blank tile
+        return Image.new("RGB", (256, 256), (0, 0, 0))  # Fallback blank tile
 
 def stitch_tiles(stitched_img, new_quadkeys):
     for idx, qk_str in enumerate(new_quadkeys):
