@@ -1,4 +1,3 @@
-# Description: This daemon will be running in cloud/edge to bridge the communication between the remote MQTT broker and the Ditto platform;
 import threading
 from workers.mqtt import setup_initial_mqtt
 from workers.ditto_listener import start_ditto_ws_listener
@@ -26,5 +25,4 @@ def start_agent_thread():
     
 
 if __name__ == "__main__":
-    # Main thread
     start_agent_thread()

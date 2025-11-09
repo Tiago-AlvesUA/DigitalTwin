@@ -9,26 +9,29 @@ from messages.cam import obtain_dynamics, cam_to_local_awareness, create_awarene
 from messages.mcm import mcm_to_local_trajectory, create_trajectories_json
 from utils.check_collisions import check_collisions
 from workers.ditto_sender import update_vehicle_speed
+import pandas as pd
 
 current_original_topic = "placeholder"
 current_subscribed_topics = set()
-# local_awareness = []        # TODO
-#local_trajectories = []         # TODO
 
 last_collision_timestamp = None
 avoidanceBrakingTime = 0.9 # seconds
 avoidanceSpeedReduction = 10
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport='websockets')
 
-logfile = open('results/latencies-mec-obu.csv', mode='w', newline='')
-writer = csv.writer(logfile)
-writer.writerow(['sender_id', 'delay_ms'])
-
+MCM_RECEPTION_DELAYS = "results/mcm-reception-delays.csv"
+MCM_RECEPTION_LOG = "results/mcm-reception-times.csv"
+CHECK_COLLISION_LOG = "results/check-collision-done-times.csv"
+reception_delays = []
+reception_times = []
+collision_check_times = []
 MAX_SAMPLES = 1000
 sample_count = 0
 
-def current_milli_time():
-    return (round(time.time() * 1000) + 5000) - 1072915200000
+
+def current_milli_time(unix_timestamp):
+    return (round(unix_timestamp * 1000) + 5000) - 1072915200000
+
 
 def manage_current_tile(message):
     global current_original_topic, current_subscribed_topics
@@ -59,11 +62,9 @@ def manage_current_tile(message):
     topics_to_subscribe = new_subscribed_topics - current_subscribed_topics
     
     for topic in topics_to_unsubscribe:
-        #bcolors.log_warning_red(f"Unsubscribing from topic: {topic}")
         mqtt_client.unsubscribe(topic)
 
     for topic in topics_to_subscribe:
-        #bcolors.log_warning_red(f"Subscribing to new topic: {topic}")
         mqtt_client.subscribe(topic)
 
     current_original_topic = original_topic_path
@@ -73,89 +74,85 @@ def manage_current_tile(message):
 
 
 def on_message_cb(client, userdata, message):
+    global sample_count, last_collision_timestamp, reception_delays, reception_times, collision_check_times #logfile, writer, last_collision_timestamp
+    
     station_id = message.topic.split("/")[3]
 
-    # TODO: Keep this because of different CAM formats?
+    # NOTE: Only done because of different CAM structures
     if int(station_id) > 1000:
         pass
 
-    # TODO: Change to station id to 22/201
     if (station_id == ITSS_ID):
         if ("CAM" in message.topic):
-            # Now switched management of current tile here, because MCMs do not have the tile path
+            # Only subscribe to relevant tiles based on own vehicle position
             manage_current_tile(message)
 
-            # timestamp is already included in the json in obtain_dynamics()
             id, dynamics = obtain_dynamics(message.payload)
             update_ditto_dynamics(dynamics)
 
-    # TODO: Change to station id to 22/201
     elif (station_id != ITSS_ID):
-        #print(f"Received message from station {station_id} on topic {message.topic}")
-        # NOTE: Right now there are no CPMs being published by other vehicles, so this is not being used
         if ("CPM" in message.topic):
-            #time_diff = time.time() - global_vars.last_local_perception_update
-            # Check if it has passed at least 1 second since the last ditto update
-            #if (time_diff < 1):
-            #    return
-
             timestamp, local_perception = cpm_to_local_perception(message.payload)
             local_perception_json = create_perception_json(timestamp, local_perception)
             update_ditto_perception(local_perception_json)
-
 
         elif ("MCM" in message.topic):
             dummy = 0
             # Other vehicle trajectory
             sender_id, mcm_gdt, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory = mcm_to_local_trajectory(dummy, message.payload)
 
+            ### Uncomment to log reception time and delay of MCM ###
+            # t_reception_mcm = time.time()
+
+            # reception_times.append(t_reception_mcm)
+
+            # # Check timestamp_end_check_collision against timestamp obtained from mcm_to_local_trajectory
+            # t_reception_mcm_its = current_milli_time(t_reception_mcm) % 65536
+            # if t_reception_mcm_its > mcm_gdt:
+            #     reception_delay = t_reception_mcm_its - mcm_gdt
+            # elif t_reception_mcm_its < mcm_gdt:
+            #     reception_delay = t_reception_mcm_its + 65536 - mcm_gdt
+            # else:
+            #     reception_delay = 0
+
+            # reception_delays.append(reception_delay)
+            ########################################################
+
             # Check if there is collision and get the vehicle id that needs to brake or regain speed
             exists_collision, vehicle_id, receiver_speed = check_collisions(sender_id, sender_speed, sender_lat, sender_lon, sender_head, sender_trajectory)
 
+            ### Uncomment to log reception time and delay of MCM ###
+            # t_collision_check_done = time.time()
+            # collision_check_times.append(t_collision_check_done)
 
-            # Check timestamp_end_check_collision against timestamp obtained from mcm_to_local_trajectory
-            t_collision_check_done = current_milli_time() % 65536
-            if t_collision_check_done > mcm_gdt:
-                delay = t_collision_check_done - mcm_gdt
-            elif t_collision_check_done < mcm_gdt:
-                delay = t_collision_check_done + 65536 - mcm_gdt
-            else:
-                delay = 0
-            
-            writer.writerow([sender_id, delay])
-            logfile.flush()
+            # if (exists_collision):
+            #     last_collision_timestamp = time.time()
+            #     bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
+            #     bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
+            # update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction)
 
-            sample_count += 1
-            if sample_count >= MAX_SAMPLES:
-                print(f"Collected {MAX_SAMPLES} samples. Stopping listener.")
-                logfile.close()
-                mqtt_client.disconnect()
+            # sample_count += 1
+            # if sample_count >= MAX_SAMPLES:
+            #     print(f"Collected {MAX_SAMPLES} samples. Stopping listener.")
+            #     pd.DataFrame(reception_delays, columns=["delay_ms"]).to_csv(MCM_RECEPTION_DELAYS, index=False)
+            #     pd.DataFrame(reception_times, columns=["reception_time"]).to_csv(MCM_RECEPTION_LOG, index=False)
+            #     pd.DataFrame(collision_check_times, columns=["collision_check_time"]).to_csv(CHECK_COLLISION_LOG, index=False)
+            #     #for row in reception_delays:
+            #     #logfile.close()
+            #     mqtt_client.disconnect()
+            ########################################################
 
-            if (exists_collision):
-                last_collision_timestamp = time.time()
-                bcolors.log_warning_red(f"Collision detected with sender vehicle {sender_id} at timestamp {last_collision_timestamp}")
-                bcolors.log_warning_red(f"Vehicle with id {vehicle_id} must brake")
-            update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReduction)
-            
-            # TODO: need to test updating Coordinates to ditto (check if structure is right)
             local_trajectories_json = create_trajectories_json(sender_id, timestamp, sender_trajectory)
             update_ditto_trajectories(local_trajectories_json)
 
         elif ("CAM" in message.topic):
-            #print("CAM received")
             global local_awareness
-            # time_diff = time.time() - last_local_awareness_update
-            # if (time_diff < 10):    #TODO change later for less time to clear
-            #     return
             
             dummy = 0
             id, timestamp, local_awareness = cam_to_local_awareness(dummy, message.payload)
-            # NOTE: Now awareness json mixes local awareness and path history TODO: Organize this feature better?
             local_awareness_json = create_awareness_json(timestamp, local_awareness)
-            #timeNOW = time.time()
             update_ditto_awareness(local_awareness_json)
-            #timeAFTER = time.time()
-            #print(f"Time taken to send CAM info to ditto: {timeAFTER - timeNOW} seconds")
+
 
 def on_connect_cb(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:
@@ -165,6 +162,7 @@ def on_connect_cb(client, userdata, flags, reason_code, properties):
     mqtt_client.subscribe(MQTT_INITIAL_TOPIC)
     # TODO: remove this subscribe when MCMs have tile path
     mqtt_client.subscribe("its_center/inqueue/json/+/+") 
+
 
 def setup_initial_mqtt():
     mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)

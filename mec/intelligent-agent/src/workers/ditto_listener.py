@@ -16,7 +16,7 @@ data_lock = threading.Lock()
 def current_milli_time():
     return (round(time.time() * 1000) + 5000) - 1072915200000
 
-# Own car
+# Own vehicle
 def get_dynamics():
     with data_lock:
         return latest_dynamics
@@ -26,17 +26,12 @@ def get_awareness():
     with data_lock:
         return latest_awareness
 
-# https://eclipse.dev/ditto/basic-changenotifications.html
-# https://eclipse.dev/ditto/basic-rql.html
-# https://eclipse.dev/ditto/httpapi-protocol-bindings-websocket.html
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
     ditto_thing_id = f"{DITTO_THING_NAMESPACE}:{DITTO_THING_NAME}"
-    # START-SEND-EVENTS: Subscribe for Thing events/change notifications
-    # RQL expressions to filter subscription notifications    
+    # START-SEND-EVENTS: Subscribe for Thing events/change notifications (RQL expressions to filter subscription notifications)
     ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),or(eq(resource:path,'/features/Awareness'),eq(resource:path,'/features/Dynamics')))")
-    #ws.send("START-SEND-MESSAGES")
 
     #print("[Ditto WS] Sent subscription commands.")
 
@@ -53,9 +48,6 @@ def on_message(ws, message):
         global latest_awareness, latest_dynamics
         with data_lock:
             if "features/Awareness" in path:
-                # TODO: Time it took to receive the event
-                # TODO: Subtract generation delta time of the message (CAM) to get real latency
-
                 latest_awareness = value
             
                 # # Get the delay the message took to be processed into a feature and received as an event
@@ -72,7 +64,6 @@ def on_message(ws, message):
 
                 #     print(f"Network delay from OBU to MEC (Process into feature and retrieved at the Agent): {delay} ms")
 
-            # Own car data (CAMs)
             elif "features/Dynamics" in path:
                 latest_dynamics = value
 
@@ -92,7 +83,6 @@ def on_message(ws, message):
 
     except json.JSONDecodeError:
         print("[Ditto WS] Received non-JSON message:")
-        #print(message)
 
 
 def on_error(ws, error):

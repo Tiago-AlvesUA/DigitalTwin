@@ -1,5 +1,13 @@
 # Configuration of Digital Twin
-## Option 1: With Hono and Ditto
+
+## Option 1: All in one Hono and Ditto C2E
+
+Only needs to run `./setup_mec_c2e.sh`
+- This will create a tenant, register the device to that tenant, update device credentials, create AMQP connection between Hono and Ditto (Ditto acts as a consumer), create ditto policy and finally create the digital twin. 
+
+- This script also sets the certificates in /tmp/c2e_hono_truststore.pem. This .pem file must be copied into certificate folder of local-twin (obu), so it communicate with hono in mec.
+
+## Option 2: By yourself Hono and Ditto C2E
 
 ### Step 1 - Set the environment
 Download the script from c2e packages, define and set the environment variables and finally, execute the script:
@@ -31,7 +39,7 @@ Publish a message to hono's MQTT adapter to modify the temperature of the twin:
     "value": 5000
     }'
 
-## Option 2: Direct connection from Ditto to Broker
+## Option 3: Direct connection from Ditto to Broker
 
 ### Step 1
 In order to fully configure Ditto and create a connection with the broker, three scripts were created. They include creating a connection, policy and finally, the digital twin. These scripts are located in the `mqtt_broker` folder and can be executed collectively using the `./full_broker_ditto_setup.sh` script.

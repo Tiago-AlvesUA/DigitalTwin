@@ -23,16 +23,16 @@ tile_x, tile_y, zoom = 0, 0, 17
 current_qk = None  # Current quadkey being processed (center tile of pygame background)
 current_grid = []  # Set to hold the current grid of tiles (for pygame background)
 
+
 def position_of_vehicle(pixel_x, pixel_y):
     global tile_x, tile_y
 
-    #print(f"Tile X: {tile_x}, Tile Y: {tile_y}, Pixel X: {pixel_x}, Pixel Y: {pixel_y}")
     x = int(pixel_x - ((tile_x-1) * 256) - WIDTH // 2) # Adjust for tile offset and center the vehicle
     y = int(-1 * (pixel_y - ((tile_y-1) * 256) - HEIGHT // 2)) # Adjust for tile offset and center the vehicle
 
     return (x,y)
 
-# https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+
 def latlon_to_img_pixel(lat, lon, zoom=17):
     """
     Convert latitude and longitude to pixel coordinates for a given tile at a certain zoom level.
@@ -46,6 +46,7 @@ def latlon_to_img_pixel(lat, lon, zoom=17):
 
     return (x, y)
 
+
 def draw_background(qk):
     global ref_coord, tile_x, tile_y, zoom, current_qk, current_grid
 
@@ -55,7 +56,6 @@ def draw_background(qk):
 
     qk_str = str(qk)  # Convert quadkey to string representation
     qk_str = '/'.join(qk_str) 
-
 
     if qk_str == current_qk:    # If the quadkey did not change, do not redraw the background
         return
@@ -101,10 +101,9 @@ def draw_background(qk):
     window.blit(pygame_image, (0, 0))
     background_surface.blit(pygame_image, (0, 0))  # Store the background image for later use
 
+
 def draw_path_history(vehicle_type, path_history, ref_coord):
     global window, tile_x, tile_y, zoom
-
-    #print(f"Path history: {path_history}")
 
     if vehicle_type == "sender":
         color = (0, 0, 255, 255) # Blue
@@ -125,6 +124,7 @@ def draw_path_history(vehicle_type, path_history, ref_coord):
         if 0 <= screen_x < WIDTH and 0 <= screen_y < HEIGHT:
             pygame.draw.circle(window, color, (screen_x, screen_y), 4)
 
+
 def export_final_frame():
     data = pygame.surfarray.array3d(window)
     image = Image.fromarray(np.transpose(data, (1, 0, 2)))
@@ -134,29 +134,34 @@ def export_final_frame():
 
     requests.post(STREAM_APP, data=buf.getvalue(), headers={"Content-Type": "image/jpeg"})
 
+
 def get_window_surface():
     return window
+
 
 def restore_background():
     window.blit(background_surface,(0,0))
 
+
 def get_window_dimensions():
     return WIDTH, HEIGHT
+
 
 def create_collision_visualizer(current_dynamics, receiver_lat, receiver_lon, sender_id, sender_lat, sender_lon):    
     receiver_quadkey = quadkey.from_geo((receiver_lat/1e7,receiver_lon/1e7),17)
     draw_background(receiver_quadkey)
 
+    # Obtain path history of the receiver vehicle from Digital Twin Dynamics feature
     if "lowFrequencyContainer" in current_dynamics["properties"]:
         receiver_delta_path_history = current_dynamics["properties"]["lowFrequencyContainer"]["pathHistory"]
         receiver_path_history = delta_path_history_to_coordinates(receiver_delta_path_history, (receiver_lat, receiver_lon))
         draw_path_history("receiver", receiver_path_history, (receiver_lat/1e7, receiver_lon/1e7))
-    # Obtaining path history from ditto, feature Awareness (Awareness is updated by the intelligent agent - mqtt.py that processes broker messages)
     
+    # Obtain path history of the sender vehicle from Digital Twin Awareness feature
     current_awareness = get_awareness()
-    # NOTE: By the time the MCM was received there might not be current awareness yet; Also check if there already is information about the sender in the awareness feature
+    # NOTE: By the time the MCM was received there might not be current awareness yet (CAMs from other vehicles might not have been processed yet)
     if (current_awareness != None) and (str(sender_id) in current_awareness["properties"]):
         sender_delta_path_history = current_awareness["properties"][str(sender_id)]["pathHistory"]
-        # Mistura, path history vou buscar ao ditto, mas sender_lat e lon vou buscar à MCM
+        # sender_lat and sender_lon are provided in the MCM message
         sender_path_history = delta_path_history_to_coordinates(sender_delta_path_history, (sender_lat, sender_lon))
         draw_path_history("sender", sender_path_history, (receiver_lat/1e7, receiver_lon/1e7))
