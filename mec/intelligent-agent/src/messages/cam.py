@@ -113,7 +113,8 @@ def cam_to_path_history(payload):
     else:
         return []
 
-# When i get path history already from ditto, feature Dynamics
+
+# Used to convert path history delta coordinates (retrieved from Ditto's Dynamics feature) to coordinates
 def delta_path_history_to_coordinates(path_history, reference_position):
     referenceLat = reference_position[0]
     referenceLon = reference_position[1]
@@ -123,7 +124,6 @@ def delta_path_history_to_coordinates(path_history, reference_position):
         deltaLat = point["pathPosition"]["deltaLatitude"]
         deltaLon = point["pathPosition"]["deltaLongitude"]
 
-        # TODO: Check if i need to divide by 1e7
         lat = referenceLat + deltaLat
         lon = referenceLon + deltaLon
 
@@ -135,28 +135,21 @@ def delta_path_history_to_coordinates(path_history, reference_position):
     return path_points
 
 
-
 def cam_to_local_awareness(last_update_time, payload):
     payload = json.loads(payload)
     global local_awareness
 
-    # TODO: Change if necessary
     if "lowFrequencyContainer" in payload["cam"]["camParameters"]:
         path_history = payload["cam"]["camParameters"]["lowFrequencyContainer"]["basicVehicleContainerLowFrequency"]["pathHistory"]
-    #path_history = cam_to_path_history(payload)
     else:
         path_history = []
 
-    # TODO: Correct this
-    if (last_update_time > 5):
+    # TODO: Change so the clearing of local awareness is based in time since last update from each vehicle ID
+    if (last_update_time > 10):
        local_awareness = []
-    #local_awareness = []
 
     timestamp = payload["cam"]["generationDeltaTime"]
 
-    #print(f"Payload: {payload}")
-
-    #obj_id = payload["header"]["stationId"]
     header = payload.get("header", {})
     obj_id = header.get("stationId") or header.get("stationID")
     if not obj_id:

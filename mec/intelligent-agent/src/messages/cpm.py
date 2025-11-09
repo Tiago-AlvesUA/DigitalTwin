@@ -1,11 +1,11 @@
 import json
 import math
 
+# NOTE: Distinguish CPM versions if necessary
 def cpm_to_local_perception(payload):
-    # TODO: Distinguish CPM versions here?
     payload = json.loads(payload)
 
-    # New local map to be updated
+    # TODO: Change the way local perception is cleared. Right now it is cleared every time a new CPM is received.
     local_perception = []
 
     timestamp = payload["cpm"]["generationDeltaTime"]
