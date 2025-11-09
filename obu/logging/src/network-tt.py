@@ -15,6 +15,7 @@ traffic = [0, 0]
 running = 1
 system_bus = None
 
+
 class TTService(dbus.service.Object):
     """ Set up the D-Bus object """
     def __init__(self, conn, object_path):
@@ -24,6 +25,7 @@ class TTService(dbus.service.Object):
     @dbus.service.signal(dbus_interface="org.example.DataReader", signature="ii")
     def NewThroughputAvailable(self, rx_bytes, tx_bytes):
         print(f"New Throughput available: RX: {rx_bytes} TX: {tx_bytes}")
+
 
 def init_dbus():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -36,6 +38,7 @@ def init_dbus():
 
     return system_bus
 
+
 def pub_tt_to_dbus(rx_bytes, tx_bytes):
     global throughput_service
     try:
@@ -46,6 +49,7 @@ def pub_tt_to_dbus(rx_bytes, tx_bytes):
 
     print(f"Published throughput to D-Bus: RX: {rx_bytes} TX: {tx_bytes}")
 
+
 def process_packet(packet):
     global traffic
     print("Packet ({}): Source: {} Destination: {}: {}".format(len(packet), packet.src, packet.dst, packet.summary()))
@@ -54,6 +58,7 @@ def process_packet(packet):
         traffic[1] += len(packet)
     elif (packet["IP"].dst in all_ips):
         traffic[0] += len(packet)
+
 
 def process_data():
     global traffic
@@ -66,7 +71,8 @@ def process_data():
 
         traffic = [0, 0]
         time.sleep(1)
-        
+
+
 def build_message():
     global traffic
 
@@ -74,6 +80,7 @@ def build_message():
     data["rx_bytes"] = traffic[0]
     data["tx_bytes"] = traffic[1]
     pub_tt_to_dbus(data["rx_bytes"], data["tx_bytes"])
+
 
 if __name__ == "__main__":
     system_bus = init_dbus()

@@ -66,4 +66,6 @@ Three folders are necessary to create, in order to store time checkpoints, time 
 
 **NOTA:** Para dar reset aos logs do container do Ditto: `kubectl rollout restart deployment c2e-ditto-gateway -n cloud2edge` e voltar a meter a configuração acima na UI do Ditto. 
 
+**NOTA:** O tamanho default dos logs dos pods é de 10 MiB (com log rotation), e existem no máximo 5 ficheiros de logs. Estes dois valores podem ser alterados para serem feitos testes mais longos.
+
 ---

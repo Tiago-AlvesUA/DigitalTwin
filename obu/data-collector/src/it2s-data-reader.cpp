@@ -86,7 +86,9 @@ void send_dbus_signal(){
 
 void it2s_loop(communications_manager_t* communications_manager, int period){
 	m_main_loop = g_main_loop_new(NULL, 0);
-	g_timeout_add_seconds(period, it2s_read, communications_manager);
+	guint interval_ms = (guint)(period * 1000);
+	g_timeout_add(interval_ms, it2s_read, communications_manager);
+	//g_timeout_add_seconds(period, it2s_read, communications_manager);
 	g_main_loop_run(m_main_loop);
 }
 
@@ -105,25 +107,24 @@ void it2s_make_message(communications_manager_t* communications_manager){
 	int32_t gps_lat = gps_data->latitude.value;
 	int32_t gps_lon = gps_data->longitude.value;
 	int32_t gps_alt = gps_data->altitude.value;
-	//printf("GPS TIMESTAMP: %lu\n", gps_data->timestamp);
+	// Uncomment to use GPS timestamp
 	//ulong gps_timestamp = gps_data->timestamp;
+	//ulong timestamp = timestamp_to_its(gps_data->timestamp);// % 65536);
+
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	unsigned long long millisecondsSinceEpoch =
 		(unsigned long long)(tv.tv_sec) * 1000 +
 		(unsigned long long)(tv.tv_usec) / 1000;
 
-	ulong gps_timestamp = timestamp_to_its(millisecondsSinceEpoch);
-	//ulong timestamp = timestamp_to_its(gps_data->timestamp);// % 65536);
-	// TODO: 65536 module only after
-
-	printf("GPS: %d, %d, %d\n", gps_lat, gps_lon, gps_alt);
-	printf("Timestamp: %lu\n", gps_timestamp);//timestamp);
-	printf("RAT: %d, lte_rssi: %d, lte_rsrq: %d\n", ratmode, lte_rssi, lte_rsrq);
-	printf("CID: %d\n", cid);
-	printf("lte_rsrp: %d, nr_rsrp: %d, lte_snr: %d, nr_snr: %d, nr_rsrq: %d\n", lte_rsrp, nr_rsrp, lte_snr, nr_snr, nr_rsrq);	
-	printf("Message Seq Number: %d\n", communications_manager->msg_sn);
-
+	ulong ref_timestamp = timestamp_to_its(millisecondsSinceEpoch);
+	
+	// printf("GPS: %d, %d, %d\n", gps_lat, gps_lon, gps_alt);
+	// printf("Timestamp: %lu\n", ref_timestamp);
+	// printf("RAT: %d, lte_rssi: %d, lte_rsrq: %d\n", ratmode, lte_rssi, lte_rsrq);
+	// printf("CID: %d\n", cid);
+	// printf("lte_rsrp: %d, nr_rsrp: %d, lte_snr: %d, nr_snr: %d, nr_rsrq: %d\n", lte_rsrp, nr_rsrp, lte_snr, nr_snr, nr_rsrq);	
+	// printf("Message Seq Number: %d\n", communications_manager->msg_sn);
 
 	params_variant = g_variant_new("(iiiiiiuiiiiiuuuuti)",
 		gps_lat, gps_lon, gps_alt, 
@@ -131,7 +132,7 @@ void it2s_make_message(communications_manager_t* communications_manager){
 		cid,
 		lte_rsrp, nr_rsrp, lte_snr, nr_snr, nr_rsrq,
 		mcc, mnc, lte_pci, nr_pci,
-		gps_timestamp, communications_manager->msg_sn++
+		ref_timestamp, communications_manager->msg_sn++
 	);
 }
 
@@ -151,7 +152,7 @@ int main(int argc, char *argv[]) {
 	init_dbus_connection();
 
 	signal(SIGINT, (__sighandler_t) on_user_abort);
-	it2s_loop(communications_manager, 1);
+	it2s_loop(communications_manager, 0.1);
 	it2s_clean(communications_manager);
 
 	// Clean up

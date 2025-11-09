@@ -6,9 +6,6 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 from gi.repository import GLib
-# import sseclient
-import base64
-# import requests
 from websocket import WebSocketApp
 from config import DITTO_WS_URL, DITTO_AUTH, DITTO_THING_NAMESPACE, DITTO_THING_NAME
 
@@ -26,6 +23,7 @@ class DelayService(dbus.service.Object):
 def current_milli_time():
     return (round(time.time() * 1000) + 5000) - 1072915200000
     
+
 def init_dbus():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
@@ -36,6 +34,7 @@ def init_dbus():
         sys.exit(1)
 
     return system_bus
+
 
 def pub_delay_to_dbus(delay):
     global delay_service
@@ -48,12 +47,14 @@ def pub_delay_to_dbus(delay):
 
     print(f"Published delay of {delay} to D-Bus")
 
+
 def on_open(ws):
     print("[Ditto WS] Connection opened.")
 
     ditto_thing_id = f"{DITTO_THING_NAMESPACE}:{DITTO_THING_NAME}"
 
     ws.send(f"START-SEND-EVENTS?filter=and(eq(thingId,'{ditto_thing_id}'),eq(resource:path,'/features/ModemStatus/properties'))")
+
 
 # When message is received, the delay the message took to arrive to the broker is calculated
 def on_message(ws, message):
@@ -90,8 +91,10 @@ def on_message(ws, message):
 def on_error(ws, error):
     print("[Ditto WS] Websocket error:", error)
 
+
 def on_close(ws, close_status_code, close_msg):
     print("[Ditto WS] Connection closed.")
+
 
 def listen():
     headers = {

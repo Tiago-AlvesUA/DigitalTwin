@@ -18,9 +18,9 @@ Secondly, run the `agent.py`. It starts three essential processes (mqtt_listener
 ![alt text](agent_arch.png)
 
 The agent is composed of 4 workers:
-- **mqtt_listener(mqtt.py):** processes C-ITS messages from the es-broker and creates JSON messages to update Awareness, Dynamics, Perception, and Trajectories features in the Digital Twin. Also checks for potential future trajectory collisions: every time a MCM from other vehicle (sender) is received, a physics simulation is performed (`pymunk`) using the information from this message and also from local dynamics, which is the own vehicle (receiver) data;
+- **mqtt_listener(mqtt.py):** processes C-ITS messages from the es-broker and creates JSON messages to update *Awareness*, *Dynamics*, *Perception*, and *Trajectories* features in the Digital Twin. Also checks for potential future trajectory collisions: every time a MCM from other vehicle (sender) is received, a physics simulation is performed (`pymunk`) using the information from this message and also from local dynamics, which is the own vehicle (receiver) data;
 
-- **ditto_listener:** listens for Dynamics and Awareness features update notifications, and stores their latest values (using a WebSocket connection to Ditto). Local dynamics is used for the collision checking process, while local awareness to draw path history in the visualizer;
+- **ditto_listener:** listens for *Dynamics* and *Awareness* features update notifications, and stores their latest values (using a WebSocket connection to Ditto). Local dynamics is used for the collision checking process, while local awareness to draw path history in the visualizer;
 
 - **ditto_sender:** sends the feature updates to Ditto via WebSocket connection;
 

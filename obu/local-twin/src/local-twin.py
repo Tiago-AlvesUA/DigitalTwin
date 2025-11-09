@@ -9,13 +9,15 @@ import dbus.mainloop.glib
 import time
 from gi.repository import GLib
 from config import HONO_BROKER_HOST, HONO_BROKER_PORT, HONO_MQTT_USERNAME, HONO_MQTT_PASSWORD, HONO_MQTT_CAFILE, HONO_MQTT_TOPIC, DITTO_THING_NAME, DITTO_THING_NAMESPACE
+import socket
 
 mqtt_client = None
 device_id = None
 network_delay = 0
 network_throughput = [0, 0]
-# asn1_files = ['ditto_message_v3.asn1', 'cd_dictionary_ts_102_894_2_v2.2.1.asn1', 'modem_status_2.0.asn1']
-# dtm = asn1tools.compile_files(asn1_files, 'jer')
+sample_count = 0
+send_times = []
+
 
 # Signal handler for clean exit
 def signal_handler(sig, frame):
@@ -23,6 +25,15 @@ def signal_handler(sig, frame):
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
     sys.exit(0)
+
+
+def on_connect(client, userdata, flags, rc, properties=None):
+    try:
+        client.socket().setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        print("[MQTT] TCP_NODELAY enabled — immediate send per publish.")
+    except Exception as e:
+        print(f"[MQTT] Failed to set TCP_NODELAY: {e}")
+
 
 # Function to set up the MQTT client
 def setup_mqtt():
@@ -34,8 +45,11 @@ def setup_mqtt():
 
     mqtt_client.username_pw_set(HONO_MQTT_USERNAME, HONO_MQTT_PASSWORD)
 
+    mqtt_client.on_connect = on_connect
+
     mqtt_client.connect(HONO_BROKER_HOST, HONO_BROKER_PORT)
     mqtt_client.loop_start()
+
 
 # Function to listen for D-Bus signals
 # TODO: Change dbus interface to correct names
@@ -51,11 +65,13 @@ def listen_for_signals():
                              dbus_interface="org.example.DataReader",
                              signal_name="NewThroughputAvailable")
 
+
 def timestamp_to_its(unix_timestamp):
     if unix_timestamp == 0:
         return 0
     # Miliseconds timestamp
     return int(((unix_timestamp + 5) * 1000) - 1072915200000)
+
 
 # Callback function when a es-broker throughput signal is received from D-Bus
 def on_new_esbroker_tt_available(*args):
@@ -80,7 +96,8 @@ def on_new_esbroker_tt_available(*args):
 
     publish_to_mqtt(json.dumps(jobj))
 
-# Callback function when a es-broker delay signal is received from D-Bus
+
+# Callback function when a DT feature update delay signal is received from D-Bus
 def on_new_esbroker_delay_available(*args):
     global network_delay, device_id
     network_delay = args[0]
@@ -99,6 +116,7 @@ def on_new_esbroker_delay_available(*args):
     }
 
     publish_to_mqtt(json.dumps(jobj))
+
 
 # Callback function when a data signal is received from D-Bus
 def on_new_data_available(*args):
@@ -129,14 +147,13 @@ def create_modstatus_msg(args):
     timestamp = args[16]
     # msg_sn = args[17] # Not needed now
 
-
     ditto_msg = {
         "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/twin/commands/modify",
         "headers": {},
-        "path": "/features/ModemStatus/properties",  # TODO: Modify this path if necessary 
+        "path": "/features/ModemStatus/properties",  
         "value": {
             "referenceTime": timestamp,
-            "referencePosition": {  # TODO: RefPosition stays here for now but it might be received from the broker later, to a new feature, Localization
+            "referencePosition": {
                 "latitude": gps_latitude,
                 "longitude": gps_longitude,
                 "positionConfidenceEllipse": {
@@ -170,19 +187,34 @@ def create_modstatus_msg(args):
         }
     }
 
-    # TODO: Later on review ASN.1 Structure
+    # TODO: Create appropriate ASN.1 Structure for Ditto message
 
     return json.dumps(ditto_msg)
 
+
 # Publish data to Hono's MQTT adapter
 def publish_to_mqtt(json_data):
-    # Publish the JSON data to the specified topic
+    global sample_count, send_times
+
     result = mqtt_client.publish(HONO_MQTT_TOPIC, json_data)
     
     if result.rc == mqtt.MQTT_ERR_SUCCESS:
         print(f"Published: {json_data} to {HONO_MQTT_TOPIC}")
+        ### Uncomment to log reception time and delay of MCM ###
+        # sample_count += 1
+        # unix_time = time.time()
+        # send_times.append(unix_time)
+        # # Stop if sample count reached 1000
+        # if sample_count >= 1000:
+        #     print("Reached 1000 samples, exiting...")
+        #     with open("send_times.txt", "w") as f:
+        #         for t in send_times:
+        #             f.write(f"{t}\n")
+        #     signal_handler(None, None)
+        ########################################################
     else:
         print(f"Failed to publish data: {result.rc}")
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C for graceful shutdown

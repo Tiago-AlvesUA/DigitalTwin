@@ -64,6 +64,8 @@ Three folders are necessary to create, in order to store time checkpoints, time 
 **NOTA:** Para deixar apenas a mensagem de log relevante, no Ditto Services Logging deixa-se apenas o logger *org.eclipse.ditto.connectivity.service.messaging* ou *org.eclipse.ditto.connectivity.service.amqp* a emitir info:
 ![alt text](image2.png)
 
+**NOTA:** O tamanho default dos logs dos pods é de 10 MiB (com log rotation), e existem no máximo 5 ficheiros de logs. Estes dois valores podem ser alterados para serem feitos testes mais longos.
+
 **EXTRA:** Receive times com logs do container mqtt adapter (creio que tem mensagens repetidas...): `kubectl logs -n cloud2edge deployment/c2e-hono-adapter-mqtt   | grep "no payload mapping configured for device"   | tail -n 1000  | awk '{print $2}' > hono_receive_times.txt`
 
 ---
