@@ -82,7 +82,10 @@ curl -i -X PUT -u devops:${DITTO_DEVOPS_PWD} -H 'Content-Type: application/json'
       "authorizationContext": [
         "pre-authenticated:hono-connection-'"${HONO_TENANT}"'"
       ],
-      "topics": ["_/_/things/live/messages"],
+      "topics": [
+        "_/_/things/live/commands",
+        "_/_/things/live/messages"
+      ],
       "headerMapping": {
         "to": "command/'"${HONO_TENANT}"'/{{ thing:id }}",
         "subject": "{{ header:subject | fn:default(topic:action-subject) }}",
@@ -90,6 +93,33 @@ curl -i -X PUT -u devops:${DITTO_DEVOPS_PWD} -H 'Content-Type: application/json'
         "correlation-id": "{{ header:correlation-id }}",
         "reply-to": "{{ fn:default('"'"'command_response/'"${HONO_TENANT}"'/replies'"'"') | fn:filter(header:response-required,'"'"'ne'"'"','"'"'false'"'"') }}"
       }
+    },
+    {
+      "address": "command/'"${HONO_TENANT}"'",
+      "authorizationContext": [
+        "pre-authenticated:hono-connection-'"${HONO_TENANT}"'"
+      ],
+      "topics": [
+        "_/_/things/twin/events",
+        "_/_/things/live/events"
+      ],
+      "headerMapping": {
+        "to": "command/'"${HONO_TENANT}"'/{{ thing:id }}",
+        "subject": "{{ header:subject | fn:default(topic:action-subject) }}",
+        "content-type": "{{ header:content-type | fn:default('"'"'application/vnd.eclipse.ditto+json'"'"') }}",
+        "correlation-id": "{{ header:correlation-id }}"
+      }
     }
   ]
 }' ${DITTO_API_BASE_URL:?}/api/2/connections/hono-amqp-connection-for-${HONO_TENANT//./_}
+
+# There are four target topics (or interaction types in Ditto) used in the configuration:
+# 1. _/_/things/live/commands : App -> Device live commands (always expect response)
+# 2. _/_/things/live/messages : App -> Device live messages (optionally expect response, only if response-required header is set)
+# 3. _/_/things/twin/events : Twin -> Device synchronization (such as feature updates)
+# 4. _/_/things/live/events : Device -> App updates 
+
+# Header mappings in targets:
+# to: AMQP destination - Hono's address for Command&Control (e.g. command/my-tenant/<device-id>)
+# reply-to: Optional address where the device should send responses
+# correlation-id: Lets Ditto match responses to requests

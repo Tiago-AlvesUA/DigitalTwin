@@ -35,3 +35,7 @@ ditto_listener:
 
 visualizer:
     https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames (latlon_to_img_pixel())
+
+### AMQP 1.0 Connection between Ditto and Agent
+
+I think it is best to dpeloy a RabbitMQ broker, as it decouples message producers (Agents) fom Ditto's ingestion layer, and avoids saturating Ditto with WS sessions.

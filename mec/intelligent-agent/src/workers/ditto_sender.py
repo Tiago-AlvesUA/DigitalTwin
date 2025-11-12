@@ -80,7 +80,8 @@ def update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReducti
             "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
             "headers": {
                 "content-type": "text/plain",
-                "correlation-id": "reducing-speed"
+                #"correlation-id": "reducing-speed"
+                "response-required": "false"
             },
             "path": "/inbox/messages/speed",
             "value": {
@@ -96,7 +97,8 @@ def update_vehicle_speed(exists_collision, receiver_speed, avoidanceSpeedReducti
             "topic": f"{DITTO_THING_NAMESPACE}/{DITTO_THING_NAME}/things/live/messages/speed",
             "headers": {
                 "content-type": "text/plain",
-                "correlation-id": "no-collision"
+                #"correlation-id": "no-collision"
+                "response-required": "false"
             },
             "path": "/inbox/messages/speed",
             "value": {
